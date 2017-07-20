@@ -12,11 +12,11 @@ function [resp oriensmap] = BCOSFIRE_media15(image, filter1, filter2, preprocess
 %   Medical Image Analysis, Volume 19 , Issue 1 , 46 - 57, ISSN 1361-8415, 
 %   http://dx.doi.org/10.1016/j.media.2014.08.002"
 % 
-%   BCOSFIRE achieves orientation selectivity by combining the output - at certain 
+%   BCOSFIRE_media15 achieves orientation selectivity by combining the output - at certain 
 %   positions with respect to the center of the COSFIRE filter - of center-on 
 %   difference of Gaussians (DoG) functions by a  geometric mean. 
 %
-%   BCOSFIRE takes as input:
+%   BCOSFIRE_media15 takes as input:
 %      image -> RGB retinal fundus image
 %      filter1 -> a struct defining the configuration parameters of the
 %                 symmetric filter:                   
