@@ -145,12 +145,12 @@ function [output] = computeCOSFIRE(inputImage,operator,tuple)
                 index = ismember(tuple.params,operator.tuples(1:3,sindex)','rows');
                 % Bugfix #1: approximation of the position was not correct.
                 % fix() was substituted with round()
-                tupleoutput = circshift(tuple.response{index},[round(row), -round(col)]); 
+                tupleoutput = circshift(tuple.response{index},[fix(row), -fix(col)]); 
             case 1
                 hashkey = getHashkey([operator.tuples(1:3,sindex)',sigma0,alpha]);
                 % Bugfix #1: approximation of the position was not correct.
                 % fix() was substituted with round()
-                tupleoutput = circshift(tuple.hashtable(hashkey),[round(row), -round(col)]); 
+                tupleoutput = circshift(tuple.hashtable(hashkey),[fix(row), -fix(col)]); 
         end
 
         outputs(:, :, sindex) = tupleoutput; % intermediate responses
