@@ -30,13 +30,17 @@ function [output, oriensmap] = ExampleBloodVesselSegmentation( )
 
 % Requires the compiling of the mex-file for the fast implementation of the
 % max-blurring function in case it is not compiled already
+
+%start timer
+tic;
+
 if ~exist('./COSFIRE/dilate')
     BeforeUsing();
 end
 
 
 % Example with an image from DRIVE data set
-image = double(imread('./data/Retina_example/test/images/01_test.tif')) ./ 255;
+image = double(imread('./data/RETINA_example/test/images/01_test.tif')) ./ 255;
 
 %% Symmetric filter params
 symmfilter = struct();
@@ -72,3 +76,12 @@ if nargout == 0
     figure; imagesc(output.respimage); colormap(gray); axis off; axis image; title('B-COSFIRE response image');
     figure; imagesc(output.segmented); colormap(gray); axis off; axis image; title('B-COSFIRE segmented image');
 end
+
+%stop timer
+toc;
+
+%ensure that output is the same as in the original program
+reference=load('reference.mat');
+difference = double(reference.ans.respimage-output.respimage);
+msgbox(['The norm of the difference is: ' num2str(norm(difference))]);
+

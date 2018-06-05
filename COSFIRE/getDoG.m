@@ -17,7 +17,13 @@ img = padarray(img,[width width],'both','symmetric');
 
 % compute DoG
 %output = fftshift(ifft2(fft2(G,sz(1),sz(2)) .* fft2(resultimg)));
-output = conv2(img, G, 'same');
+
+%TEST RUN ON GPU TO COMPARE SPEEDUP
+imgGPU = gpuArray(img);
+GGPU = gpuArray(G);
+output1 = conv2(imgGPU, GGPU, 'same');
+output = gather(output1);
+%whos - command displays class of variables above
 
 if nargin == 6
     %output(output < threshold) = 0;
