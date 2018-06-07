@@ -18,12 +18,27 @@ img = padarray(img,[width width],'both','symmetric');
 % compute DoG
 %output = fftshift(ifft2(fft2(G,sz(1),sz(2)) .* fft2(resultimg)));
 
-%TEST RUN ON GPU TO COMPARE SPEEDUP
+%TEST RUN ON GPU custom kernel TO COMPARE SPEEDUP
+% 1. Create CUDAKernel object.
+kernel = parallel.gpu.CUDAKernel('convolution.ptx','convolution.cu','conv2');
+
+% 2. Set object properties.
+[nrows, ncols, ~] = size(img);
+[nrowsKernel, ncolsKernel, ~] = size(G);
+
+blockSize = 128;
+kernel.ThreadBlockSize = [blockSize, 1, 1];
+kernel.GridSize = [ceil(nrows/blockSize), ncols];
+
 imgGPU = gpuArray(img);
 GGPU = gpuArray(G);
-output1 = conv2(imgGPU, GGPU, 'same');
-output = gather(output1);
-%whos - command displays class of variables above
+
+outputMatrix=zeros(size(img));
+outputMatrix=gpuArray(outputMatrix);
+% 3. Call feval with defined inputs.
+outputMatrix=feval(kernel,outputMatrix,imgGPU, nrows, ncols, GGPU, nrowsKernel, ncolsKernel);
+
+output = gather(outputMatrix);
 
 if nargin == 6
     %output(output < threshold) = 0;
