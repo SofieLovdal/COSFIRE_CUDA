@@ -5,14 +5,15 @@
 * of image and configuration of filter is done in Matlab).
 * The kernel performs the following steps in parallel:
 * 
-* 1. Generates k filters corresponding to each unique (sigma, rho)-combination
-* in the set of tuples as a convolution of their corresponding DoG filter 
-* and Gaussian blur filter.
+* 1. Generates DoG filters corresponding to each unique sigma
+* and convolves this with the input image
 * 
-* 2.Convolve the input image with each of the k filters from (1.)
+* 2. Generates Gaussian blur filter for each unique (sigma, rho)-combination
+* in the set of tuples and performs dilation (max-blurring) on each corresponding
+* response from (1.)
 * 
-* 3.Output the response image after shifting each subresponse according to
-* (rho, theta).
+* 3.Output the response image by weighted geometric mean after shifting 
+* each subresponse according to (rho, theta).
 * 
 * Sofie Lovdal 5.6.2018
 */
@@ -28,11 +29,11 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
    
    /*Create DoG filter for each sigma in set S*/
    
+   /*Convolve with input*/
+   
    /*Create Gaussian blur filter for each rho-sigma combination*/
    
-   /*Convolve DoG and Gaussian filter*/
-   
-   /*Convolve resulting filter with input image*/
+   /*Convolve (max-blurring) with each corresponding response from DoG convolution*/
    
    /*Obtain final response by inspecting subresponses (array of 2D matrices
     * and their corresponding shift info is needed)*/

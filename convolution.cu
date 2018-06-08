@@ -41,3 +41,5 @@ __global__ void conv2(double * output, double * const input, unsigned int const 
 	}
 	output[linearIdx] = (sum<0 ? 0: sum);
 }
+
+
