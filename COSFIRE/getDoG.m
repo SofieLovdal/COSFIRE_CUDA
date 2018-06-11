@@ -26,7 +26,6 @@ kernel = parallel.gpu.CUDAKernel('convolution.ptx','convolution.cu','conv2');
 [nrows, ncols, ~] = size(img)
 [nrowsKernel, ncolsKernel, ~] = size(G);
 
-blockSize = 16*16;
 kernel.ThreadBlockSize = [16, 16, 1];
 kernel.GridSize = [ceil(nrows/16), ceil(ncols/16)];
 
@@ -36,10 +35,10 @@ GGPU = gpuArray(G);
 outputMatrix=zeros(size(img));
 outputMatrix=gpuArray(outputMatrix);
 % 3. Call feval with defined inputs.
-outputMatrix=feval(kernel,outputMatrix,imgGPU, nrows, ncols, GGPU, nrowsKernel, ncolsKernel);
+outputMatrix=feval(kernel,outputMatrix,imgGPU, ncols, nrows, GGPU, nrowsKernel, ncolsKernel);
 
 output = gather(outputMatrix);
-
+%output=conv2(img, G, 'same');
 if nargin == 6
     %output(output < threshold) = 0;
     output(find(output < threshold)) = 0;

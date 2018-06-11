@@ -83,5 +83,6 @@ toc;
 %ensure that output is the same as in the original program
 reference=load('reference.mat');
 difference = double(reference.ans.respimage-output.respimage);
-msgbox(['The norm of the difference is: ' num2str(norm(difference))]);
+%msgbox(['The norm of the difference is: ' num2str(norm(difference))]);
+Norm = norm(difference)
 

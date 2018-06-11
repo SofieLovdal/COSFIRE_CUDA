@@ -3,7 +3,9 @@ g2 = fspecial('gaussian',17,4);
 
 G = g2 - g1;  
 
-img = rand(500);
+%FOR 500x500: SUM OF ERROR 8.6E-12.
+%FOR 584X565: 8.8E+03
+img = rand(584, 565);
 
 % 1. Create CUDAKernel object.
 kernel = parallel.gpu.CUDAKernel('convolution.ptx','convolution.cu','conv2');
@@ -22,7 +24,7 @@ GGPU = gpuArray(G);
 outputMatrix=zeros(size(img));
 outputMatrix=gpuArray(outputMatrix);
 % 3. Call feval with defined inputs.
-outputMatrix=feval(kernel,outputMatrix,imgGPU, nrows, ncols, GGPU, nrowsKernel, ncolsKernel);
+%outputMatrix=feval(kernel,outputMatrix,imgGPU, ncols, nrows, GGPU, nrowsKernel, ncolsKernel);
 
 output = gather(outputMatrix);
 
