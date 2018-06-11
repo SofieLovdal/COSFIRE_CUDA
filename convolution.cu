@@ -7,7 +7,6 @@ __global__ void conv2(double * output, double * const input, unsigned int const 
 					  unsigned int const numCols, double * const kernel,
 					  unsigned int const height_kernel, unsigned int const width_kernel)
 {
-   //width = numCols, height = numRows
    
    /*global thread ID in x dimension - moving horizontally in the image*/
    const int colIdx = blockIdx.x*blockDim.x + threadIdx.x;

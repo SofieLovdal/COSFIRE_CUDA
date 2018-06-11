@@ -21,15 +21,12 @@
 __global__ void COSFIRE_CUDA(double * output, double * const input,
 					unsigned int const numRows, unsigned int const numCols,
 					double const * tuples, unsigned int const numTuples)
-{	
-	
-   /*Find number of unique rho-sigma combinations*/
-   
-   /*Sync after each step, but use full thread capacity*/
+{	   
+   /*Maximize GPU load. Sync before output merging*/
    
    /*Create DoG filter for each sigma in set S*/
    
-   /*Convolve with input*/
+   /*Convolve with input -- separable filters?? */
    
    /*Create Gaussian blur filter for each rho-sigma combination*/
    
