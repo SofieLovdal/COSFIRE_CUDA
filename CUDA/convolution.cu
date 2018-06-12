@@ -14,6 +14,8 @@ __global__ void conv2(double * output, double * const input, unsigned int const 
    const int rowIdx = blockIdx.y*blockDim.y + threadIdx.y;
    
    int i, j, kernelIdx, imageIdx;
+   
+   /*Effectivize: Load local image area into shared memory space*/
     
    /*make sure we are within image*/
    if(colIdx>=numCols || rowIdx >= numRows) return; 

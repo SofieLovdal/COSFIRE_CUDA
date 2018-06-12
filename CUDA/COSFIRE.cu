@@ -25,6 +25,9 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
    /*Maximize GPU load. Sync before output merging*/
    
    /*Create DoG filter for each sigma in set S*/
+   /*Launch getDoG kernel for each sigma in set S!
+    * The ideal amount of threads for this kernel is sz*sz, 
+    *Return the 2D DoG filter which is then convolved here with input image*/
    
    /*Convolve with input -- separable filters?? */
    
@@ -34,11 +37,6 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
    
    /*Obtain final response by inspecting subresponses (array of 2D matrices
     * and their corresponding shift info is needed)*/
-   
-   /*current pixel*/
-   const int rowIdx = blockIdx.x*blockDim.x + threadIdx.x;
-   const int colIdx = blockIdx.y;
-   const int sliceIdx = threadIdx.z;
    
    /*make sure we are within image*/
    if(rowIdx>=numRows) return;
