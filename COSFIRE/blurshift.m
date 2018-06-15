@@ -4,14 +4,45 @@ if nargin == 4
     minRC = [1 1];
     maxRC = [size(A,1),size(A,2)];
 end
+
+tic;
 E = maxgaussianfilter(A,sigma,shiftrow,shiftcol,minRC,maxRC);
+toc;
+
+%Compare cuda kernel maxBlur.cu to output from here!
+radius = round(sigma * 3.5);
+g1 = fspecial('gaussian',radius*2+1,sigma)
+
+kernel = parallel.gpu.CUDAKernel('CUDA/maxBlur.ptx','CUDA/maxBlur.cu','maxBlur');
+
+% 2. Set object properties.
+[nrows, ncols, ~] = size(A);
+[nrowsKernel, ncolsKernel, ~] = size(g1);
+
+kernel.ThreadBlockSize = [16, 16, 1];
+kernel.GridSize = [ceil(nrows/16), ceil(ncols/16)]; %This might be the thing that causes the swap row/col???
+
+imgGPU = gpuArray(A);
+GGPU = gpuArray(g1);
+
+outputMatrix=zeros(size(A));
+outputMatrix=gpuArray(outputMatrix);
+% 3. Call feval with defined inputs.
+tic;
+outputMatrix=feval(kernel,outputMatrix,imgGPU, ncols, nrows, GGPU, nrowsKernel, ncolsKernel);
+toc;
+output = gather(outputMatrix);
+
+totalError = sum(sum(abs(A-E)))
+
+
 
 function D = maxgaussianfilter(A,sigma,shiftrow,shiftcol,minRC,maxRC)
 
 [rA,cA] = size(A);
 D = zeros([rA,cA]);
 radius = round(sigma * 3.5);
-gauss1D = exp(-[-radius:radius].^2./(2*sigma*sigma));
+gauss1D = exp(-[-radius:radius].^2./(2*sigma*sigma))
 
 [Brows Bcols] = find(A);
 start = min([Brows Bcols],[],1);

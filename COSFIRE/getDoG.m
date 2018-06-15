@@ -20,10 +20,10 @@ img = padarray(img,[width width],'both','symmetric');
 
 %TEST RUN ON GPU custom kernel TO COMPARE SPEEDUP
 % 1. Create CUDAKernel object.
-kernel = parallel.gpu.CUDAKernel('convolution.ptx','convolution.cu','conv2');
+kernel = parallel.gpu.CUDAKernel('CUDA/convolution.ptx','CUDA/convolution.cu','conv2');
 
 % 2. Set object properties.
-[nrows, ncols, ~] = size(img)
+[nrows, ncols, ~] = size(img);
 [nrowsKernel, ncolsKernel, ~] = size(G);
 
 kernel.ThreadBlockSize = [16, 16, 1];
