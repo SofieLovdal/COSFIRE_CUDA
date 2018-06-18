@@ -5,11 +5,12 @@ if nargin == 4
     maxRC = [size(A,1),size(A,2)];
 end
 
-tic;
+%tic;
 E = maxgaussianfilter(A,sigma,shiftrow,shiftcol,minRC,maxRC);
-toc;
+%toc;
 
-%Compare cuda kernel maxBlur.cu to output from here!
+%{
+Compare cuda kernel maxBlur.cu to output from here!
 radius = round(sigma * 3.5);
 g1 = fspecial('gaussian',radius*2+1,sigma)
 
@@ -34,6 +35,7 @@ toc;
 output = gather(outputMatrix);
 
 totalError = sum(sum(abs(A-E)))
+%}
 
 
 
@@ -42,7 +44,7 @@ function D = maxgaussianfilter(A,sigma,shiftrow,shiftcol,minRC,maxRC)
 [rA,cA] = size(A);
 D = zeros([rA,cA]);
 radius = round(sigma * 3.5);
-gauss1D = exp(-[-radius:radius].^2./(2*sigma*sigma))
+gauss1D = exp(-[-radius:radius].^2./(2*sigma*sigma));
 
 [Brows Bcols] = find(A);
 start = min([Brows Bcols],[],1);
