@@ -1,5 +1,5 @@
 %tests the circshift, compares it with the matlab implementation.
-%OBS changed the delta x formula. Check with Nicola
+%Should work just fine
 
 A = rand(12, 12)
 [nrows, ncols, ~] = size(A);
@@ -7,7 +7,7 @@ A = rand(12, 12)
 rho = 2.0;
 phi = pi;
 
-deltax = round(rho*cos(phi));
+deltax = round(-rho*cos(phi));
 deltay = round(-rho*sin(phi));
 
 tic;
@@ -15,7 +15,7 @@ A1 = circshift(A,deltax,2);
 A1 = circshift(A1,deltay,1) %shifts the matrix two steps in y-direction
 toc;
 
-kernel = parallel.gpu.CUDAKernel('circshift.ptx','circshift.cu','circshift');
+kernel = parallel.gpu.CUDAKernel('shiftPixels.ptx','shiftPixels.cu','shiftPixels');
 kernel.ThreadBlockSize = [12, 12, 1];
 
 outputMatrix=zeros(size(A));

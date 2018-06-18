@@ -29,7 +29,7 @@ __global__ void shiftPixels(double * output, double * const input,
    int linearIdx = rowIdx*numCols + colIdx;
    double pixelValue = input[linearIdx];
    
-   int deltay = round(rho*cos(phi)); //floor or ceil? cos(pi/2)=0 so move 0 steps in x direction
+   int deltay = round(-rho*cos(phi)); //floor or ceil? cos(pi/2)=0 so move 0 steps in x direction
    int deltax = round(-rho*sin(phi)); //sin(pi/2)=1 so move -rho steps in y direction (two pixels upwards, -2)
    
    if(colIdx+deltax<0 || colIdx+deltax>=numCols || rowIdx+deltay<0 || rowIdx+deltay >= numRows) return;
