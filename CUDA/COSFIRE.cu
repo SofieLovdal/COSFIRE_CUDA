@@ -16,15 +16,36 @@
 * each subresponse according to (rho, theta).
 * 
 * Sofie Lovdal 5.6.2018
+* 
+* For now, the implementation allocates the necessary big chunks of 
+* memory on host side and passes it to the algorithm governing kernel.
 */
+
 
 __global__ void COSFIRE_CUDA(double * output, double * const input,
 					unsigned int const numRows, unsigned int const numCols,
-					double const * tuples, unsigned int const numTuples)
+					double const * tuples, unsigned int const numTuples,
+					double * responses, 
+					double const threshold, double const sigmaratio)
 {	   
    /*Maximize GPU load. Sync before output merging*/
    
-   /*Create DoG filter for each sigma in set S*/
+   /*The dynamic parallelism of the kernel is structured as follwing: 
+    * One thread for each tuple is launched from host side.
+    * Thread i launches workflow for single tuple (outputresponse)
+    */
+    
+    double * myTuple = *(tuples[threadIdx.x]);
+    double * myResponse = *(responses[threadIdx.x]);
+    
+	//launch Kernel that inserts the DoG convoluted with input into myResponse (write this control flow kernel) + sync
+	//launch Kernel that inserts the Gaussian maxblurring into another buffer (myResponse_maxBlur)? + sync
+	//launch Kernel that shifts pixels from maxBlur buffer into new buffer (we can reuse myResponse now I guess)
+	//master thread can launch kernel for geometricMean of myResponse, put into output.
+	   
+   
+   
+   
    /*Launch getDoG kernel for each sigma in set S!
     * The ideal amount of threads for this kernel is sz*sz, 
     *Return the 2D DoG filter which is then convolved here with input image*/
@@ -37,16 +58,6 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
    
    /*Obtain final response by inspecting subresponses (array of 2D matrices
     * and their corresponding shift info is needed)*/
-   
-   /*make sure we are within image*/
-   if(rowIdx>=numRows) return;
-	
-   /*Compute the index of my element */
-   const unsigned int linearIdx = rowIdx + colIdx*numRows + sliceIdx*numRows*numCols;
-   
-   if(linearIdx>=numRows*numCols) return;
-  
-   /*assign value to output*/
-   output[linearIdx]=input[linearIdx];
+
 }
 
