@@ -6,7 +6,7 @@
 * array of dimensions numResponses*rumRows*numCols.
 */
 
-__global__ void geometricMean(double * output, double * const input, 
+__device__ void geometricMean(double * output, double * const input, 
 					  unsigned int const numRows, unsigned int const numCols, 
 					  int const numResponses, double const threshold)
 {

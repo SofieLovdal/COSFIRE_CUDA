@@ -3,7 +3,7 @@
  * Should be improved by using reduction when retrieving the sum of the matrix
  * instead of all threads looping over the full matrix.*/
 
-__global__ void generate2DGaussian(double * output, double sigma, int sz) {
+__device__ void generate2DGaussian(double * output, double sigma, int sz) {
 	
    /*x and y coordinates of thread in kernel. The gaussian filters are 
     *small enough for the kernel to fit into a single thread block of sz*sz*/
@@ -31,4 +31,3 @@ __global__ void generate2DGaussian(double * output, double sigma, int sz) {
 	
    output[linearIdx]/=sum;
 }
-
