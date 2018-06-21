@@ -35,7 +35,7 @@ __constant__ int MAXSIZE;
 __global__ void COSFIRE_CUDA(double * output, double * const input,
 					unsigned int const numRows, unsigned int const numCols,
 					double * tuples, unsigned int const numTuples,
-					double * responseBuffer1, double responseBuffer2,
+					double * responseBuffer1, double * responseBuffer2,
 					double const threshold, double const sigmaratio)
 {	   
    /*Maximize GPU load. Sync before output merging*/

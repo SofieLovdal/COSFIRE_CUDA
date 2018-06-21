@@ -3,6 +3,7 @@
  * This function starts up the algorithm flow of the CUDA kernels.*/
 
 #include "mex.h"
+#include "matrix.h"
 #include "COSFIRE.cu"
 #include "cuda.h"
 
@@ -12,7 +13,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 {
    //The following is absolutely necessary to pass: input (preprocessed image) with dims, tuples, numTuples, sigmaratio, threshold and other parameters
    //Buffers and similar can be created here, e.g. output, responseBuffer
-   double *input, *tuples, *output, *responseBuffer1, *responseBuffer2;
+   double *input, *tuples, *output, *responseBuffer1, *responseBuffer2, *outMatrix;
    int numRows, numCols, numTuples;
    double sigmaratio, threshold;
    
@@ -23,24 +24,24 @@ void mexFunction( int nlhs, mxArray *plhs[],
       mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nlhs", "One output required.");
    }
    
-   input = mxGetDoubles(prhs[0]);
+   input = mxGetPr(prhs[0]);
    numRows = mxGetScalar(prhs[1]);
    numCols = mxGetScalar(prhs[2]);
-   tuples = mxGetDoubles(prhs[3]);
-   numTuples = mxGetScalar(prhs[[4]);
-   sigmaratio = mxGetScalar(prhs[[5]);
-   threshold = mxGetScalar(prhs[[6]);
+   tuples = mxGetPr(prhs[3]);
+   numTuples = mxGetScalar(prhs[4]);
+   sigmaratio = mxGetScalar(prhs[5]);
+   threshold = mxGetScalar(prhs[6]);
    
    cudaMalloc((void**)&output, numRows*numCols*sizeof(double));
    cudaMalloc((void**)&responseBuffer1, numTuples*numRows*numCols*sizeof(double));
    cudaMalloc((void**)&responseBuffer2, numTuples*numRows*numCols*sizeof(double));
 	
    /* create the output matrix */
-   plhs[0] = mxCreateDoubleMatrix(1,nRows*nCols,mxREAL);
+   plhs[0] = mxCreateDoubleMatrix(1,numRows*numCols,mxREAL);
    //Use the mxGetDoubles function to assign the outMatrix argument to plhs[0]
    
    /* get a pointer to the real data in the output matrix */
-   outMatrix = mxGetDoubles(plhs[0]);
+   outMatrix = mxGetPr(plhs[0]);
 	
 	
    COSFIRE_CUDA<<<1, numTuples>>>(output, input, numRows, numCols, tuples, numTuples, responseBuffer1, responseBuffer2, threshold, sigmaratio);
