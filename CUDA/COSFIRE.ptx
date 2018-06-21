@@ -2742,17 +2742,18 @@ BB11_26:
 	ret;
 }
 
-	// .globl	_Z12COSFIRE_CUDAPdS_jjS_jS_dd
-.visible .entry _Z12COSFIRE_CUDAPdS_jjS_jS_dd(
-	.param .u64 _Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_0,
-	.param .u64 _Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_1,
-	.param .u32 _Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_2,
-	.param .u32 _Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_3,
-	.param .u64 _Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_4,
-	.param .u32 _Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_5,
-	.param .u64 _Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_6,
-	.param .f64 _Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_7,
-	.param .f64 _Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_8
+	// .globl	_Z12COSFIRE_CUDAPdS_jjS_jS_ddd
+.visible .entry _Z12COSFIRE_CUDAPdS_jjS_jS_ddd(
+	.param .u64 _Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_0,
+	.param .u64 _Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_1,
+	.param .u32 _Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_2,
+	.param .u32 _Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_3,
+	.param .u64 _Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_4,
+	.param .u32 _Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_5,
+	.param .u64 _Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_6,
+	.param .f64 _Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_7,
+	.param .f64 _Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_8,
+	.param .f64 _Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_9
 )
 {
 	.reg .pred 	%p<3>;
@@ -2761,12 +2762,12 @@ BB11_26:
 	.reg .b64 	%rd<15>;
 
 
-	ld.param.u64 	%rd4, [_Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_0];
-	ld.param.u64 	%rd5, [_Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_1];
-	ld.param.u32 	%r2, [_Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_2];
-	ld.param.u32 	%r3, [_Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_3];
-	ld.param.u64 	%rd6, [_Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_4];
-	ld.param.f64 	%fd2, [_Z12COSFIRE_CUDAPdS_jjS_jS_dd_param_8];
+	ld.param.u64 	%rd4, [_Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_0];
+	ld.param.u64 	%rd5, [_Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_1];
+	ld.param.u32 	%r2, [_Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_2];
+	ld.param.u32 	%r3, [_Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_3];
+	ld.param.u64 	%rd6, [_Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_4];
+	ld.param.f64 	%fd2, [_Z12COSFIRE_CUDAPdS_jjS_jS_ddd_param_9];
 	cvta.to.global.u64 	%rd7, %rd6;
 	mov.u32 	%r4, %tid.x;
 	mul.lo.s32 	%r5, %r4, 3;

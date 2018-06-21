@@ -35,10 +35,11 @@ __constant__ int MAXSIZE;
 __global__ void COSFIRE_CUDA(double * output, double * const input,
 					unsigned int const numRows, unsigned int const numCols,
 					double * tuples, unsigned int const numTuples,
-					double * responses,
+					double * responseBuffer1, double responseBuffer2,
 					double const threshold, double const sigmaratio)
 {	   
    /*Maximize GPU load. Sync before output merging*/
+   /*An idea would be transposing the input matrix to begin with, then we get rid of the column first order problem*/
    
    /*The dynamic parallelism of the kernel is structured as follwing: 
     * One thread for each tuple is launched from host side.
@@ -49,7 +50,8 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
     /*As many threads for this kernels are launched as the number of tuples: initial thread pool is 1D array so thread ID is threadIdx.x*/
     /*we create a pointer to each thread's place in the array so that we can pass this as argument to functions*/
     double * myTuple = &(tuples[3*threadIdx.x]);
-    //double * myResponse = &(responses[numRows*numCols*threadIdx.x]);
+    double * myResponse1 = &(responseBuffer1[numRows*numCols*threadIdx.x]);
+    //double * myResponse2 = &(responseBuffer2[numRows*numCols*threadIdx.x]);
     
     double * DoGfilter;
     DoGfilter = (double*)malloc(MAXSIZE*sizeof(double));
