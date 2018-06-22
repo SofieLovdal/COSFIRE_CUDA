@@ -20,6 +20,7 @@
 * For now, the implementation allocates the necessary big chunks of 
 * memory on host side and passes it to the algorithm governing kernel.
 */
+#include <stdio.h>
 #include "cuda.h"
 #include "cuda_runtime.h"
 
@@ -30,7 +31,7 @@
 #include "geometricMean.cu"
 
 /*some maximum size for some buffers*/
-__constant__ int MAXSIZE;
+__constant__ int MAXSIZE=200;
 
 __global__ void COSFIRE_CUDA(double * output, double * const input,
 					unsigned int const numRows, unsigned int const numCols,
@@ -46,9 +47,10 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
     * Thread i launches workflow for single tuple (outputresponse)
     */
     
-    
     /*As many threads for this kernels are launched as the number of tuples: initial thread pool is 1D array so thread ID is threadIdx.x*/
     /*we create a pointer to each thread's place in the array so that we can pass this as argument to functions*/
+    cudaError err;
+    
     double * myTuple = &(tuples[3*threadIdx.x]);
     double * myResponse1 = &(responseBuffer1[numRows*numCols*threadIdx.x]);
     //double * myResponse2 = &(responseBuffer2[numRows*numCols*threadIdx.x]);
@@ -56,13 +58,35 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
     double * DoGfilter;
     DoGfilter = (double*)malloc(MAXSIZE*sizeof(double));
 	double mySigma = myTuple[0];
-	
+
 	int sz = ceil(mySigma*3) * 2 + 1; //related to calculating suitable block size for getDoG kernel launch
-	//dim3 gridSize = (1);
-	//dim3 blockSize = (16, 16);
-    getDoG<<<1, 512>>>(DoGfilter, mySigma, sigmaratio); //launch one grid with blocksize sz. Every tuple-thread does this - dynamic parallelism.
-	__syncthreads();
-	conv2<<<600, 512>>>(output, input, numRows, numCols, DoGfilter, sz, sz);
+	dim3 gridSize (1);
+	dim3 blockSize (sz, sz, 1);
+    getDoG<<<1, blockSize>>>(DoGfilter, mySigma, sigmaratio); //launch one grid with blocksize sz. Every tuple-thread does this - dynamic parallelism.
+	err = cudaGetLastError();
+    if ( cudaSuccess != err )
+    {
+       printf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
+    }
+    __syncthreads();
+	cudaDeviceSynchronize();
+
+	dim3 blockSize2 (16, 16, 1);
+	int blockDimx= ceilf(numRows/16);
+	int blockDimy=ceilf(numCols/16);
+    dim3 gridSize2 (blockDimx, blockDimy);
+    
+	conv2<<<gridSize, blockSize>>>(output, input, numRows, numCols, DoGfilter, sz, sz);
+	err = cudaGetLastError();
+    if ( cudaSuccess != err )
+    {
+       printf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
+    }
+    
+    __syncthreads();
+	cudaDeviceSynchronize();
+	//printf("we get here 2\n");
+
     
 	//launch Kernel that inserts the DoG convoluted with input into myResponse (write this control flow kernel) + sync
 	//launch Kernel that inserts the Gaussian maxblurring into another buffer (myResponse_maxBlur)? + sync

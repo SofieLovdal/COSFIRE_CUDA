@@ -17,7 +17,8 @@ __device__ void generate2DGaussian(double * output, double sigma, int sz) {
    
    output[linearIdx] = exp(-(pow((double)(distx), 2.0)+pow((double)(disty), 2.0))/(2*(pow(sigma, 2.0))));
    
-   __syncthreads();
+    __syncthreads();
+	cudaDeviceSynchronize(); 
    
    int i, j;
    double sum=0.0;
@@ -28,6 +29,6 @@ __device__ void generate2DGaussian(double * output, double sigma, int sz) {
 		   sum += output[i*sz + j];
 		}
 	}
-	
+   //printf("sum of 2D Gaussian=%f\n", sum);
    output[linearIdx]/=sum;
 }

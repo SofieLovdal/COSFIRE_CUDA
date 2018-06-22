@@ -13,7 +13,7 @@ tic;
 g1 = fspecial('gaussian',sz,sigma);    
 g2 = fspecial('gaussian',sz,sigma*sigmaRatio);
 G = g2 - g1;
-output = conv2(image, G, 'same')
+output = conv2(image, G, 'same');
 toc;
 
 %tuples adapted to column first order
@@ -25,11 +25,11 @@ tuple = [2, 0, 0];
 threshold = 0.5;
 
 tic;
-outputMatrix=mexWrapper(image, nrows, ncols, tuple, 1, sigmaRatio, threshold)
+outputMatrix=mexWrapper(image, nrows, ncols, tuple, 1, sigmaRatio, threshold);
 toc;
 size(output)
 size(outputMatrix)
-
+sumGPUOutput = sum(outputMatrix)
 %B = reshape(outputMatrix,[nrows,ncols]);
 %diff = output-B;
 
