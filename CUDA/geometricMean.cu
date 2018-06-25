@@ -6,13 +6,13 @@
 * array of dimensions numResponses*rumRows*numCols.
 */
 
-__device__ void geometricMean(double * output, double * const input, 
+__global__ void geometricMean(double * output, double * const input, 
 					  unsigned int const numRows, unsigned int const numCols, 
 					  int const numResponses, double const threshold)
 {
    
    const int colIdx = blockIdx.x*blockDim.x + threadIdx.x;
-   const int rowIdx = blockIdx.y*blockDim.y + threadIdx.y;;
+   const int rowIdx = blockIdx.y*blockDim.y + threadIdx.y;
     
    /*make sure we are within image*/
    if(colIdx>=numCols || rowIdx >= numRows) return; 

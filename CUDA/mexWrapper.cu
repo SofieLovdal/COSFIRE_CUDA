@@ -21,6 +21,10 @@ void mexFunction( int nlhs, mxArray *plhs[],
    double *input_on_GPU, *tuples_on_GPU;
    cudaError err;
    
+   /*change this to real values*/
+   double sigma0 = 3/6;
+   double alpha = 0.8/6;
+   
    if(nrhs != 7) {
       mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nrhs", "Seven inputs required.");
    }
@@ -66,7 +70,11 @@ void mexFunction( int nlhs, mxArray *plhs[],
    mexPrintf("launching COSFIRE kernel\n");		
 
    /*Make kernel call with the GPU variables*/
-   COSFIRE_CUDA<<<1, numTuples>>>(output, input_on_GPU, numRows, numCols, tuples_on_GPU, numTuples, responseBuffer1, responseBuffer2, threshold, sigmaratio);
+   dim3 gridSize(1, 1, 1);
+   dim3 blockSize(numTuples, 1, 1);
+   /*Make kernel call with the GPU variables*/
+   COSFIRE_CUDA<<<gridSize, blockSize>>>(output, input_on_GPU, numRows, numCols, tuples_on_GPU,
+                          numTuples, responseBuffer1, responseBuffer2, threshold, sigmaratio, alpha, sigma0);
    
     err = cudaGetLastError();
     if ( cudaSuccess != err )

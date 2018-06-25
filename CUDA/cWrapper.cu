@@ -13,6 +13,9 @@ main() {
 	double *input_on_GPU, *tuples_on_GPU, *output_on_GPU;
 	cudaError err;
 	
+	double sigma0 = 3/6;
+	double alpha = 0.8/6;
+	
 	input = (double*)malloc(numRows*numCols*sizeof(double));
 	tuples = (double*)malloc(3*numTuples*sizeof(double));
 	output = (double*)malloc(numRows*numCols*sizeof(double));
@@ -44,10 +47,11 @@ main() {
 		
    printf("launching COSFIRE kernel\n");		
 	
-   dim3 gridSize = (1);
-   dim3 blockSize = (numTuples);
+   dim3 gridSize(1, 1, 1);
+   dim3 blockSize(numTuples, 1, 1);
    /*Make kernel call with the GPU variables*/
-   COSFIRE_CUDA<<<gridSize, blockSize>>>(output_on_GPU, input_on_GPU, numRows, numCols, tuples_on_GPU, numTuples, responseBuffer1, responseBuffer2, threshold, sigmaratio);
+   COSFIRE_CUDA<<<gridSize, blockSize>>>(output_on_GPU, input_on_GPU, numRows, numCols, tuples_on_GPU,
+                          numTuples, responseBuffer1, responseBuffer2, threshold, sigmaratio, alpha, sigma0);
 
     err = cudaGetLastError();
     if ( cudaSuccess != err )

@@ -29,15 +29,17 @@
 #include "maxBlur.cu"
 #include "shiftPixels.cu"
 #include "geometricMean.cu"
+#include "getGaussian.cu"
 
 /*some maximum size for some buffers*/
-__constant__ int MAXSIZE=200;
+__constant__ int MAXSIZE=600;
 
 __global__ void COSFIRE_CUDA(double * output, double * const input,
 					unsigned int const numRows, unsigned int const numCols,
 					double * tuples, unsigned int const numTuples,
 					double * responseBuffer1, double * responseBuffer2,
-					double const threshold, double const sigmaratio)
+					double const threshold, double const sigmaratio,
+					double const alpha, double const sigma0)
 {	   
    /*Maximize GPU load. Sync before output merging*/
    /*An idea would be transposing the input matrix to begin with, then we get rid of the column first order problem*/
@@ -53,7 +55,7 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
     
     double * myTuple = &(tuples[3*threadIdx.x]);
     double * myResponse1 = &(responseBuffer1[numRows*numCols*threadIdx.x]);
-    //double * myResponse2 = &(responseBuffer2[numRows*numCols*threadIdx.x]);
+    double * myResponse2 = &(responseBuffer2[numRows*numCols*threadIdx.x]);
     
     double * DoGfilter;
     DoGfilter = (double*)malloc(MAXSIZE*sizeof(double));
@@ -66,35 +68,46 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
 	err = cudaGetLastError();
     if ( cudaSuccess != err )
     {
-       printf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
+       //printf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
     }
     __syncthreads();
 	cudaDeviceSynchronize();
 
 	dim3 blockSize2 (16, 16, 1);
-	int blockDimx= ceilf(numRows/16);
-	int blockDimy=ceilf(numCols/16);
-    dim3 gridSize2 (blockDimx, blockDimy);
-    
-	conv2<<<gridSize, blockSize>>>(output, input, numRows, numCols, DoGfilter, sz, sz);
+    dim3 gridSize2 (ceil((double)numRows/16), ceil((double)numCols/16));
+
+	conv2<<<gridSize2, blockSize2>>>(myResponse1, input, numRows, numCols, DoGfilter, sz, sz);
 	err = cudaGetLastError();
     if ( cudaSuccess != err )
     {
-       printf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
+       //printf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
     }
     
     __syncthreads();
 	cudaDeviceSynchronize();
 	//printf("we get here 2\n");
-
-    
+	
+	double rho = myTuple[1];
+	double blurSigma = sigma0 + alpha*rho;
+	
+	/*Here: control proper size of 2D Gaussian filter. Matlab code does this with separable filters I believe so
+	 * I cannot directly compare. So here send filter with blurSigma to maxBlur??*/
+	getGaussian<<<1, blockSize>>>(DoGfilter, blurSigma);
+    maxBlur<<<gridSize2, blockSize2>>>(myResponse2, myResponse1, numRows, numCols, DoGfilter, sz, sz);
 	//launch Kernel that inserts the DoG convoluted with input into myResponse (write this control flow kernel) + sync
 	//launch Kernel that inserts the Gaussian maxblurring into another buffer (myResponse_maxBlur)? + sync
 	//launch Kernel that shifts pixels from maxBlur buffer into new buffer (we can reuse myResponse now I guess)
 	//master thread can launch kernel for geometricMean of myResponse, put into output.
 	   
+   double phi = myTuple[2];
+   shiftPixels<<<gridSize2, blockSize2>>>(myResponse1, myResponse2, numRows, numCols, rho, phi);
    
+    __syncthreads();
+	cudaDeviceSynchronize();
    
+   if(threadIdx.x == 0) {
+	   geometricMean<<<gridSize2, blockSize2>>>(output, responseBuffer1, numRows, numCols, numTuples, threshold);
+   }	    
    
    /*Launch getDoG kernel for each sigma in set S!
     * The ideal amount of threads for this kernel is sz*sz, 
