@@ -13,8 +13,8 @@ main() {
 	double *input_on_GPU, *tuples_on_GPU, *output_on_GPU;
 	cudaError err;
 	
-	double sigma0 = 3/6;
-	double alpha = 0.8/6;
+	double sigma0 = 0.5;
+	double alpha = 0.1167;
 	
 	input = (double*)malloc(numRows*numCols*sizeof(double));
 	tuples = (double*)malloc(3*numTuples*sizeof(double));

@@ -20,25 +20,25 @@ img = padarray(img,[width width],'both','symmetric');
 
 %TEST RUN ON GPU custom kernel TO COMPARE SPEEDUP
 % 1. Create CUDAKernel object.
-kernel = parallel.gpu.CUDAKernel('CUDA/convolution.ptx','CUDA/convolution.cu','conv2');
+%kernel = parallel.gpu.CUDAKernel('CUDA/convolution.ptx','CUDA/convolution.cu','conv2');
 
 % 2. Set object properties.
-[nrows, ncols, ~] = size(img);
-[nrowsKernel, ncolsKernel, ~] = size(G);
+%[nrows, ncols, ~] = size(img);
+%[nrowsKernel, ncolsKernel, ~] = size(G);
 
-kernel.ThreadBlockSize = [16, 16, 1];
-kernel.GridSize = [ceil(nrows/16), ceil(ncols/16)];
+%kernel.ThreadBlockSize = [16, 16, 1];
+%kernel.GridSize = [ceil(nrows/16), ceil(ncols/16)];
 
-imgGPU = gpuArray(img);
-GGPU = gpuArray(G);
+%imgGPU = gpuArray(img);
+%GGPU = gpuArray(G);
 
-outputMatrix=zeros(size(img));
-outputMatrix=gpuArray(outputMatrix);
+%outputMatrix=zeros(size(img));
+%outputMatrix=gpuArray(outputMatrix);
 % 3. Call feval with defined inputs.
-outputMatrix=feval(kernel,outputMatrix,imgGPU, ncols, nrows, GGPU, nrowsKernel, ncolsKernel);
+%outputMatrix=feval(kernel,outputMatrix,imgGPU, ncols, nrows, GGPU, nrowsKernel, ncolsKernel);
 
-output = gather(outputMatrix);
-%output=conv2(img, G, 'same');
+%output = gather(outputMatrix);
+output=conv2(img, G, 'same');
 if nargin == 6
     %output(output < threshold) = 0;
     output(find(output < threshold)) = 0;

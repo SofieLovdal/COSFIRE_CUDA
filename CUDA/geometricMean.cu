@@ -25,6 +25,6 @@ __global__ void geometricMean(double * output, double * const input,
    for(i=0; i<numResponses; i++) {
 	   sum+=input[linearIdx+i*numRows*numCols];
    }
-	
-   output[linearIdx] = pow(sum, 1/numResponses); 
+   double mu = 	pow(sum, 1/(double)numResponses);
+   output[linearIdx] =  (mu>=threshold ? mu : 0);
 }

@@ -26,7 +26,7 @@ __global__ void maxBlur(double * output, double * const input, unsigned int cons
    int kernel_radius=height_kernel/2;
    int imageRowIdx, imageColIdx;
    
-   /*Apply max blurring to linarIdx*/
+   /*Apply max blurring to linearIdx*/
 	double max=-1000000, value;
 	for (i = -kernel_radius; i <= kernel_radius; i++) {
 		for (j = -kernel_radius; j <= kernel_radius; j++) {

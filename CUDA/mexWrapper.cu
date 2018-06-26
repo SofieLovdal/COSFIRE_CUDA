@@ -17,13 +17,14 @@ void mexFunction( int nlhs, mxArray *plhs[],
    //Buffers and similar can be created here, e.g. output, responseBuffer
    double *input, *tuples, *output, *responseBuffer1, *responseBuffer2, *outMatrix;
    int numRows, numCols, numTuples;
-   double sigmaratio, threshold;
+   double sigmaratio, threshold=0.4;
    double *input_on_GPU, *tuples_on_GPU;
    cudaError err;
    
    /*change this to real values*/
-   double sigma0 = 3/6;
-   double alpha = 0.8/6;
+   double sigma0 = 1/3;
+   double alpha = 0.0167;
+   //double threshold = 0;	   
    
    if(nrhs != 7) {
       mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nrhs", "Seven inputs required.");
@@ -34,7 +35,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
    
    
    int gpuInit = mxInitGPU();
-   mexPrintf("gpuInit: %d \n", gpuInit);
+   //mexPrintf("gpuInit: %d \n", gpuInit);
    
    input = mxGetPr(prhs[0]);
    numRows = mxGetScalar(prhs[1]);
@@ -42,7 +43,8 @@ void mexFunction( int nlhs, mxArray *plhs[],
    tuples = mxGetPr(prhs[3]);
    numTuples = mxGetScalar(prhs[4]);
    sigmaratio = mxGetScalar(prhs[5]);
-   threshold = mxGetScalar(prhs[6]);
+   //threshold = mxGetScalar(prhs[6]);
+   
    
    /*Allocate space on GPU for the necessary variables
     * Works after resetting GPU by logging in and out*/
@@ -81,17 +83,16 @@ void mexFunction( int nlhs, mxArray *plhs[],
     {
        mexPrintf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
     }
-	mexPrintf("we get here\n");
 
    //hopefully the final response (output) is now copied into the mex output buffer
    cudaMemcpy(outMatrix, output, numRows*numCols*sizeof(double), cudaMemcpyDeviceToHost);
    
-   int i;
-   double sum=0;
-   for(i=0; i<numRows*numCols; i++) {
-	   sum+=outMatrix[i];
-   }
-   mexPrintf("sum output = %f \n", sum);
+   //int i;
+   //double sum=0;
+   //for(i=0; i<numRows*numCols; i++) {
+	   //sum+=outMatrix[i];
+   //}
+   //mexPrintf("sum output = %f \n", sum);
    
    cudaFree(input_on_GPU);
    cudaFree(tuples_on_GPU);

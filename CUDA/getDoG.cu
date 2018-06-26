@@ -12,8 +12,8 @@ __global__ void getDoG(double * output, double sigma, double sigmaratio) {
 	int linearIdx = threadIdx.y*sz + threadIdx.x;
 	if(linearIdx>=sz*sz) return;
 	
-	__shared__ double g1[600];
-	__shared__ double g2[600];
+	__shared__ double g1[900];
+	__shared__ double g2[900];
 	
 	//printf("size: %d, threadIdx.x = %d, thredIdx.y = %d, gridDim.x=%d \n", sz, threadIdx.x, threadIdx.y, gridDim.x);
 	

@@ -63,7 +63,7 @@ asymmfilter.alpha     = 0.1;
 % CHASE_DB1 -> preprocessthresh = 0.1, thresh = 38
 output = struct();
 if nargout == 1 || nargout == 0
-    [output.respimage] = COSFIRE_CUDA(image, symmfilter, asymmfilter, 0.5);
+    [output.respimage] 
     %[output.respimage] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
 elseif nargout == 2
     [output.respimage, oriensmap] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);

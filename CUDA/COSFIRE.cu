@@ -32,7 +32,7 @@
 #include "getGaussian.cu"
 
 /*some maximum size for some buffers*/
-__constant__ int MAXSIZE=600;
+__constant__ int MAXSIZE=900;
 
 __global__ void COSFIRE_CUDA(double * output, double * const input,
 					unsigned int const numRows, unsigned int const numCols,
@@ -85,7 +85,6 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
     
     __syncthreads();
 	cudaDeviceSynchronize();
-	//printf("we get here 2\n");
 	
 	double rho = myTuple[1];
 	double blurSigma = sigma0 + alpha*rho;
@@ -98,6 +97,7 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
 	//launch Kernel that inserts the Gaussian maxblurring into another buffer (myResponse_maxBlur)? + sync
 	//launch Kernel that shifts pixels from maxBlur buffer into new buffer (we can reuse myResponse now I guess)
 	//master thread can launch kernel for geometricMean of myResponse, put into output.
+	
 	   
    double phi = myTuple[2];
    shiftPixels<<<gridSize2, blockSize2>>>(myResponse1, myResponse2, numRows, numCols, rho, phi);
