@@ -22,8 +22,8 @@ void mexFunction( int nlhs, mxArray *plhs[],
    cudaError err;
    
    /*change this to real values*/
-   double sigma0 = 1/3;
-   double alpha = 0.0167;
+   double sigma0 = 3/6;
+   double alpha = 0.7/6;
    //double threshold = 0;	   
    
    if(nrhs != 7) {

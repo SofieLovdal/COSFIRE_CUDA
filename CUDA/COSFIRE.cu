@@ -75,8 +75,9 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
 
 	dim3 blockSize2 (16, 16, 1);
     dim3 gridSize2 (ceil((double)numRows/16), ceil((double)numCols/16));
-
+	
 	conv2<<<gridSize2, blockSize2>>>(myResponse1, input, numRows, numCols, DoGfilter, sz, sz);
+    
 	err = cudaGetLastError();
     if ( cudaSuccess != err )
     {
@@ -87,12 +88,14 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
 	cudaDeviceSynchronize();
 	
 	double rho = myTuple[1];
-	double blurSigma = sigma0 + alpha*rho;
-	
+	double blurSigma = sigma0 + alpha*rho; //CHANGE SIZE OF FILTER + NO NORMALIZATION OF VALUES
+	sz = ceil(blurSigma*3)*2+1;
 	/*Here: control proper size of 2D Gaussian filter. Matlab code does this with separable filters I believe so
 	 * I cannot directly compare. So here send filter with blurSigma to maxBlur??*/
-	getGaussian<<<1, blockSize>>>(DoGfilter, blurSigma);
-    maxBlur<<<gridSize2, blockSize2>>>(myResponse2, myResponse1, numRows, numCols, DoGfilter, sz, sz);
+	 if(threadIdx.x == 8) {
+	   getGaussian<<<1, blockSize>>>(DoGfilter, blurSigma);
+       maxBlur<<<gridSize2, blockSize2>>>(output, myResponse1, numRows, numCols, DoGfilter, sz, sz);
+    }
 	//launch Kernel that inserts the DoG convoluted with input into myResponse (write this control flow kernel) + sync
 	//launch Kernel that inserts the Gaussian maxblurring into another buffer (myResponse_maxBlur)? + sync
 	//launch Kernel that shifts pixels from maxBlur buffer into new buffer (we can reuse myResponse now I guess)
@@ -100,13 +103,14 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
 	
 	   
    double phi = myTuple[2];
-   shiftPixels<<<gridSize2, blockSize2>>>(myResponse1, myResponse2, numRows, numCols, rho, phi);
+  
+   //shiftPixels<<<gridSize2, blockSize2>>>(output, myResponse2, numRows, numCols, rho, phi);
    
     __syncthreads();
 	cudaDeviceSynchronize();
    
    if(threadIdx.x == 0) {
-	   geometricMean<<<gridSize2, blockSize2>>>(output, responseBuffer1, numRows, numCols, numTuples, threshold);
+	   //geometricMean<<<gridSize2, blockSize2>>>(output, responseBuffer1, numRows, numCols, numTuples, threshold);
    }	    
    
    /*Launch getDoG kernel for each sigma in set S!

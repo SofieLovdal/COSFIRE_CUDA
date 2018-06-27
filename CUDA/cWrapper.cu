@@ -28,15 +28,14 @@ main() {
 	}	
 
 	
-	/*Allocate space on GPU for the necessary variables
-    * Works after resetting GPU by logging in and out*/
+	/*Allocate space on GPU for the necessary variables */
    cudaMalloc((void**)&input_on_GPU, numRows*numCols*sizeof(double));
    cudaMalloc((void**)&tuples_on_GPU, 3*numTuples*sizeof(double));
    cudaMalloc((void**)&output_on_GPU, numRows*numCols*sizeof(double));
    cudaMalloc((void**)&responseBuffer1, numTuples*numRows*numCols*sizeof(double));
    cudaMalloc((void**)&responseBuffer2, numTuples*numRows*numCols*sizeof(double));
    
-   /*Copy over some input arguments to the GPU before calling kernel*/
+   /*Copy over input arguments to the GPU before calling kernel*/
    cudaMemcpy(input_on_GPU, input, numRows*numCols*sizeof(double), cudaMemcpyHostToDevice);
    cudaMemcpy(tuples_on_GPU, tuples, 3*numTuples*sizeof(double), cudaMemcpyHostToDevice);
    err = cudaGetLastError();
@@ -58,11 +57,8 @@ main() {
     {
        printf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
     }
-	printf("we get here\n");
 
-   //hopefully the final response (output) is now copied into the mex output buffer
    cudaMemcpy(output, output_on_GPU, numRows*numCols*sizeof(double), cudaMemcpyDeviceToHost);
-   //cudaMemcpy(output, responseBuffer1, numRows*numCols*sizeof(double), cudaMemcpyDeviceToHost);
    
    double sum=0;
    for(i=0; i<numRows*numCols; i++) {
