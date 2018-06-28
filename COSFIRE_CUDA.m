@@ -77,6 +77,7 @@ params_cosfire = symmfilter{1}.params.COSFIRE
 [hej, numtuples, ~] = size(tuples);
 rot1 = mexWrapper(reshape(image.',1,[]), nrows, ncols, tuples, numtuples, 0.5, 0);
 
+rot1(1:32)
 %rot1 is a row major vector, now turn it back into a matrix
 rot1 = (reshape(rot1, [ncols, nrows])).';
 %rot1 = applyCOSFIRE(image, symmfilter);

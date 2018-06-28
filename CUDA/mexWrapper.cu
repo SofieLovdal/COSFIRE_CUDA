@@ -22,9 +22,11 @@ void mexFunction( int nlhs, mxArray *plhs[],
    cudaError err;
    
    /*change this to real values*/
-   double sigma0 = 3/6;
-   double alpha = 0.7/6;
+   double sigma0 = 3.0/6.0;
+   double alpha = 0.7/6.0;
    //double threshold = 0;	   
+   
+   mexPrintf("sigma0= %f", sigma0);
    
    if(nrhs != 7) {
       mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nrhs", "Seven inputs required.");

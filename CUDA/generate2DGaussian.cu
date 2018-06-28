@@ -3,7 +3,7 @@
  * Should be improved by using reduction when retrieving the sum of the matrix
  * instead of all threads looping over the full matrix.*/
 
-__device__ void generate2DGaussian(double * output, double sigma, int sz) {
+__device__ void generate2DGaussian(double * output, double sigma, int sz, bool normalize) {
 	
    /*x and y coordinates of thread in kernel. The gaussian filters are 
     *small enough for the kernel to fit into a single thread block of sz*sz*/
@@ -16,6 +16,8 @@ __device__ void generate2DGaussian(double * output, double sigma, int sz) {
    int disty = abs(rowIdx - sz/2);
    
    output[linearIdx] = exp(-(pow((double)(distx), 2.0)+pow((double)(disty), 2.0))/(2*(pow(sigma, 2.0))));
+   
+   if(normalize==true) {
    
     __syncthreads();
 	cudaDeviceSynchronize(); 
@@ -31,4 +33,5 @@ __device__ void generate2DGaussian(double * output, double sigma, int sz) {
 	}
    //printf("sum of 2D Gaussian=%f\n", sum);
    output[linearIdx]/=sum;
+   }
 }

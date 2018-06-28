@@ -7,6 +7,6 @@ __global__ void getGaussian(double * output, double sigma) {
 	int linearIdx = threadIdx.y*sz + threadIdx.x;
 	if(linearIdx>=sz*sz) return;
 	
-	generate2DGaussian(output, sigma, sz);
+	generate2DGaussian(output, sigma, sz, false);
 	
 }	

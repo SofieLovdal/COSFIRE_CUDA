@@ -89,13 +89,22 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
 	
 	double rho = myTuple[1];
 	double blurSigma = sigma0 + alpha*rho; //CHANGE SIZE OF FILTER + NO NORMALIZATION OF VALUES
-	sz = ceil(blurSigma*3)*2+1;
+	sz = ceil(blurSigma*3.0)*2+1;
+	dim3 blockSize3(sz, sz, 1);
 	/*Here: control proper size of 2D Gaussian filter. Matlab code does this with separable filters I believe so
 	 * I cannot directly compare. So here send filter with blurSigma to maxBlur??*/
-	 if(threadIdx.x == 8) {
-	   getGaussian<<<1, blockSize>>>(DoGfilter, blurSigma);
-       maxBlur<<<gridSize2, blockSize2>>>(output, myResponse1, numRows, numCols, DoGfilter, sz, sz);
-    }
+	 
+	 /*Something goes wrong here: Thread 0 gives empty output (black, all zeros), while it does produce OKAY results for the
+	  * other threads. Sz is apparently 1, and blurSigma 0.*/
+
+	   getGaussian<<<1, blockSize3>>>(DoGfilter, blurSigma);
+	   //output[25]=(double)sz;
+	   //output[26]=blurSigma;
+	   //output[27]=sigma0;
+	   //output[28]=alpha;
+	   //output[29]=rho;
+	   //output[30]=5;
+       maxBlur<<<gridSize2, blockSize2>>>(myResponse2, myResponse1, numRows, numCols, DoGfilter, sz, sz);
 	//launch Kernel that inserts the DoG convoluted with input into myResponse (write this control flow kernel) + sync
 	//launch Kernel that inserts the Gaussian maxblurring into another buffer (myResponse_maxBlur)? + sync
 	//launch Kernel that shifts pixels from maxBlur buffer into new buffer (we can reuse myResponse now I guess)
@@ -103,9 +112,10 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
 	
 	   
    double phi = myTuple[2];
-  
-   //shiftPixels<<<gridSize2, blockSize2>>>(output, myResponse2, numRows, numCols, rho, phi);
-   
+   //something fishy going on with the shifting. fix this
+   if(threadIdx.x==5) {
+   shiftPixels<<<gridSize2, blockSize2>>>(output, myResponse2, numRows, numCols, rho, phi);
+	}
     __syncthreads();
 	cudaDeviceSynchronize();
    

@@ -18,8 +18,8 @@ __global__ void getDoG(double * output, double sigma, double sigmaratio) {
     __syncthreads();
 	cudaDeviceSynchronize();  
 	
-	generate2DGaussian(g1, sigma, sz);
-	generate2DGaussian(g2, sigma*sigmaratio, sz);
+	generate2DGaussian(g1, sigma, sz, true);
+	generate2DGaussian(g2, sigma*sigmaratio, sz, true);
 	
 	__syncthreads();
 	cudaDeviceSynchronize();
