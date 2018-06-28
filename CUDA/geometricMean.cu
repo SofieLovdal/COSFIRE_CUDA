@@ -20,11 +20,12 @@ __global__ void geometricMean(double * output, double * const input,
    /*Pixel to consider in outputimage*/
    int linearIdx = rowIdx*numCols + colIdx;
    
-   double sum=0;
+   double product=1.0;
    int i;
    for(i=0; i<numResponses; i++) {
-	   sum+=input[linearIdx+i*numRows*numCols];
+	   product*=input[linearIdx+i*numRows*numCols];
    }
-   double mu = 	pow(sum, 1/(double)numResponses);
-   output[linearIdx] =  (mu>=threshold ? mu : 0);
+   
+   double mu = pow(product, (1.0/(double)numResponses));
+   output[linearIdx] = mu; //here: (no)thresholding
 }

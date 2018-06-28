@@ -11,9 +11,8 @@ __global__ void shiftPixels(double * output, double * const input,
 						  double const rho, double const phi)
 {
    
-   /*global thread ID in x dimension - moving horizontally in the image*/
+   /*global thread ID in x, y dimension*/
    const int colIdx = blockIdx.x*blockDim.x + threadIdx.x;
-   /*global thread ID in y dimension - moving vertically in the image*/
    const int rowIdx = blockIdx.y*blockDim.y + threadIdx.y;
     
    /*make sure we are within image*/
@@ -29,12 +28,13 @@ __global__ void shiftPixels(double * output, double * const input,
    int linearIdx = rowIdx*numCols + colIdx;
    double pixelValue = input[linearIdx];
    
-   int deltax = round(-rho*cos(phi)); //FIX: ROUND TOWARDS 0. cos(pi/2)=0 so move 0 steps in x direction
-   int deltay = round(-rho*sin(phi)); //sin(pi/2)=1 so move -rho steps in y direction (two pixels upwards, -2)
+   int deltax = (int)(-rho*cos(phi)); //FIX: ROUND TOWARDS 0. cos(pi/2)=0 so move 0 steps in x direction
+   int deltay = (int)(-rho*sin(phi)); //sin(pi/2)=1 so move -rho steps in y direction (two pixels upwards, -2)
    
-   if(colIdx+deltax<0 || colIdx+deltax>=numCols || rowIdx+deltay<0 || rowIdx+deltay >= numRows) return;
+   if(colIdx+deltax<0 || colIdx+deltax>=numCols || rowIdx-deltay<0 || rowIdx-deltay >= numRows) return;
    
-   int outputPixel = linearIdx + deltax + deltay*numCols; //or minus?
+   /*y axis is opposite direction in image compared to cartesian coordinate system?*/
+   int outputPixel = linearIdx + deltax - deltay*numCols; //or minus?
    
    output[outputPixel] = pixelValue;
 

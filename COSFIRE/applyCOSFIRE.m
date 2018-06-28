@@ -18,16 +18,16 @@
 function rotations = applyCOSFIRE(inputImage, operatorlist)
 
 %operatorlist here contains the tuples!
-params = operatorlist{1}.params
-params.ht
-params.COSFIRE
-params.invariance
-params.detection
-params.inputfilter
+params = operatorlist{1}.params;
+params.ht;
+params.COSFIRE;
+params.invariance;
+params.detection;
+params.inputfilter;
 %this is the tuples represented as a matrix. first row is sigma, second
 %row is rho, third row is phi.
-operatorlistTuples = operatorlist{1}.tuples(2:end, :)
-length_operatorlist = length(operatorlist)
+operatorlistTuples = operatorlist{1}.tuples(2:end, :);
+length_operatorlist = length(operatorlist);
 
 tuple = computeTuples(inputImage,operatorlist);
 

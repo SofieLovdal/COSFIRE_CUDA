@@ -34,107 +34,62 @@
 /*some maximum size for some buffers*/
 __constant__ int MAXSIZE=900;
 
+/* Parameters in input: (0)threshold, (1)sigmaratio, (2)alpha, (3)sigma0,
+ * (4)rotationStep, (5)numRotations*/
+
 __global__ void COSFIRE_CUDA(double * output, double * const input,
 					unsigned int const numRows, unsigned int const numCols,
 					double * tuples, unsigned int const numTuples,
 					double * responseBuffer1, double * responseBuffer2,
-					double const threshold, double const sigmaratio,
-					double const alpha, double const sigma0)
+					double * parameters, int rotationNumber)
 {	   
-   /*Maximize GPU load. Sync before output merging*/
-   /*An idea would be transposing the input matrix to begin with, then we get rid of the column first order problem*/
-   
-   /*The dynamic parallelism of the kernel is structured as follwing: 
-    * One thread for each tuple is launched from host side.
-    * Thread i launches workflow for single tuple (outputresponse)
-    */
-    
-    /*As many threads for this kernels are launched as the number of tuples: initial thread pool is 1D array so thread ID is threadIdx.x*/
-    /*we create a pointer to each thread's place in the array so that we can pass this as argument to functions*/
-    cudaError err;
     
     double * myTuple = &(tuples[3*threadIdx.x]);
     double * myResponse1 = &(responseBuffer1[numRows*numCols*threadIdx.x]);
     double * myResponse2 = &(responseBuffer2[numRows*numCols*threadIdx.x]);
     
+    double threshold = parameters[0];
+    double sigmaratio = parameters[1];
+    double alpha = parameters[2];
+    double sigma0 = parameters[3];
+    double rotationStep = parameters[4];
+    
+    double mySigma = myTuple[0];
+    double myRho = myTuple[1];
+    double myPhi = myTuple[2]+rotationStep*rotationNumber;
+    
     double * DoGfilter;
     DoGfilter = (double*)malloc(MAXSIZE*sizeof(double));
-	double mySigma = myTuple[0];
+	
 
 	int sz = ceil(mySigma*3) * 2 + 1; //related to calculating suitable block size for getDoG kernel launch
 	dim3 gridSize (1);
 	dim3 blockSize (sz, sz, 1);
     getDoG<<<1, blockSize>>>(DoGfilter, mySigma, sigmaratio); //launch one grid with blocksize sz. Every tuple-thread does this - dynamic parallelism.
-	err = cudaGetLastError();
-    if ( cudaSuccess != err )
-    {
-       //printf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
-    }
-    __syncthreads();
-	cudaDeviceSynchronize();
+
 
 	dim3 blockSize2 (16, 16, 1);
     dim3 gridSize2 (ceil((double)numRows/16), ceil((double)numCols/16));
-	
 	conv2<<<gridSize2, blockSize2>>>(myResponse1, input, numRows, numCols, DoGfilter, sz, sz);
     
-	err = cudaGetLastError();
-    if ( cudaSuccess != err )
-    {
-       //printf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
-    }
     
-    __syncthreads();
-	cudaDeviceSynchronize();
-	
-	double rho = myTuple[1];
-	double blurSigma = sigma0 + alpha*rho; //CHANGE SIZE OF FILTER + NO NORMALIZATION OF VALUES
+	double blurSigma = sigma0 + alpha*myRho; //CHANGE SIZE OF FILTER + NO NORMALIZATION OF VALUES
 	sz = ceil(blurSigma*3.0)*2+1;
 	dim3 blockSize3(sz, sz, 1);
-	/*Here: control proper size of 2D Gaussian filter. Matlab code does this with separable filters I believe so
-	 * I cannot directly compare. So here send filter with blurSigma to maxBlur??*/
-	 
-	 /*Something goes wrong here: Thread 0 gives empty output (black, all zeros), while it does produce OKAY results for the
-	  * other threads. Sz is apparently 1, and blurSigma 0.*/
+	getGaussian<<<1, blockSize3>>>(DoGfilter, blurSigma);
+    maxBlur<<<gridSize2, blockSize2>>>(myResponse2, myResponse1, numRows, numCols, DoGfilter, sz, sz);
 
-	   getGaussian<<<1, blockSize3>>>(DoGfilter, blurSigma);
-	   //output[25]=(double)sz;
-	   //output[26]=blurSigma;
-	   //output[27]=sigma0;
-	   //output[28]=alpha;
-	   //output[29]=rho;
-	   //output[30]=5;
-       maxBlur<<<gridSize2, blockSize2>>>(myResponse2, myResponse1, numRows, numCols, DoGfilter, sz, sz);
-	//launch Kernel that inserts the DoG convoluted with input into myResponse (write this control flow kernel) + sync
-	//launch Kernel that inserts the Gaussian maxblurring into another buffer (myResponse_maxBlur)? + sync
-	//launch Kernel that shifts pixels from maxBlur buffer into new buffer (we can reuse myResponse now I guess)
-	//master thread can launch kernel for geometricMean of myResponse, put into output.
-	
-	   
-   double phi = myTuple[2];
-   //something fishy going on with the shifting. fix this
-   if(threadIdx.x==5) {
-   shiftPixels<<<gridSize2, blockSize2>>>(output, myResponse2, numRows, numCols, rho, phi);
-	}
+
+    shiftPixels<<<gridSize2, blockSize2>>>(myResponse1, myResponse2, numRows, numCols, myRho, myPhi);
+   
+   
     __syncthreads();
 	cudaDeviceSynchronize();
    
+   
    if(threadIdx.x == 0) {
-	   //geometricMean<<<gridSize2, blockSize2>>>(output, responseBuffer1, numRows, numCols, numTuples, threshold);
-   }	    
+	   geometricMean<<<gridSize2, blockSize2>>>(output, responseBuffer1, numRows, numCols, numTuples, threshold);
+   }
    
-   /*Launch getDoG kernel for each sigma in set S!
-    * The ideal amount of threads for this kernel is sz*sz, 
-    *Return the 2D DoG filter which is then convolved here with input image*/
-   
-   /*Convolve with input -- separable filters?? */
-   
-   /*Create Gaussian blur filter for each rho-sigma combination*/
-   
-   /*Convolve (max-blurring) with each corresponding response from DoG convolution*/
-   
-   /*Obtain final response by inspecting subresponses (array of 2D matrices
-    * and their corresponding shift info is needed)*/
-
 }
 

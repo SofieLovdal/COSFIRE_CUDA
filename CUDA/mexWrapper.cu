@@ -5,7 +5,7 @@
 #include "mex.h"
 #include "gpu/mxGPUArray.h"
 #include "matrix.h"
-#include "COSFIRE.cu"
+#include "rotationInvariantCOSFIRE.cu"
 #include "cuda.h"
 #include <stdio.h>
 
@@ -17,16 +17,10 @@ void mexFunction( int nlhs, mxArray *plhs[],
    //Buffers and similar can be created here, e.g. output, responseBuffer
    double *input, *tuples, *output, *responseBuffer1, *responseBuffer2, *outMatrix;
    int numRows, numCols, numTuples;
-   double sigmaratio, threshold=0.4;
-   double *input_on_GPU, *tuples_on_GPU;
-   cudaError err;
-   
-   /*change this to real values*/
-   double sigma0 = 3.0/6.0;
-   double alpha = 0.7/6.0;
-   //double threshold = 0;	   
-   
-   mexPrintf("sigma0= %f", sigma0);
+   double *input_on_GPU, *tuples_on_GPU, *orientationResponses;
+   double *parameters;
+   cudaError err;  
+ 
    
    if(nrhs != 7) {
       mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nrhs", "Seven inputs required.");
@@ -44,41 +38,37 @@ void mexFunction( int nlhs, mxArray *plhs[],
    numCols = mxGetScalar(prhs[2]);
    tuples = mxGetPr(prhs[3]);
    numTuples = mxGetScalar(prhs[4]);
-   sigmaratio = mxGetScalar(prhs[5]);
-   //threshold = mxGetScalar(prhs[6]);
+   parameters = mxGetPr(prhs[6]);
    
+   int numOrientations = parameters[5];
    
-   /*Allocate space on GPU for the necessary variables
-    * Works after resetting GPU by logging in and out*/
+   /*Allocate space on GPU for the necessary variables */
    cudaMalloc((void**)&input_on_GPU, numRows*numCols*sizeof(double));
    cudaMalloc((void**)&tuples_on_GPU, 3*numTuples*sizeof(double));
    cudaMalloc((void**)&output, numRows*numCols*sizeof(double));
-   cudaMalloc((void**)&responseBuffer1, numTuples*numRows*numCols*sizeof(double));
-   cudaMalloc((void**)&responseBuffer2, numTuples*numRows*numCols*sizeof(double));
+   cudaMalloc((void**)&responseBuffer1, numOrientations*numTuples*numRows*numCols*sizeof(double));
+   cudaMalloc((void**)&responseBuffer2, numOrientations*numTuples*numRows*numCols*sizeof(double));
+   cudaMalloc((void**)&orientationResponses, numOrientations*numRows*numCols*sizeof(double));
    
    /*Copy over some input arguments to the GPU before calling kernel*/
    cudaMemcpy(input_on_GPU, input, numRows*numCols*sizeof(double), cudaMemcpyHostToDevice);
    cudaMemcpy(tuples_on_GPU, tuples, 3*numTuples*sizeof(double), cudaMemcpyHostToDevice);
+   
    err = cudaGetLastError();
    if ( cudaSuccess != err )
    {
       mexPrintf("cudaCheckError() failed at cudaMemcpy %s\n", cudaGetErrorString( err ) );
-   }	
-   /* create the output matrix */
+   }
+   	
+   /* create the output matrix, get a pointer to the real data in this */
    plhs[0] = mxCreateDoubleMatrix(1,numRows*numCols,mxREAL);
-   //Use the mxGetDoubles function to assign the outMatrix argument to plhs[0]
-   
-   /* get a pointer to the real data in the output matrix */
-   outMatrix = mxGetPr(plhs[0]);
-		
-   mexPrintf("launching COSFIRE kernel\n");		
+   outMatrix = mxGetPr(plhs[0]);	
 
-   /*Make kernel call with the GPU variables*/
    dim3 gridSize(1, 1, 1);
-   dim3 blockSize(numTuples, 1, 1);
+   dim3 blockSize(numOrientations, 1, 1);
    /*Make kernel call with the GPU variables*/
-   COSFIRE_CUDA<<<gridSize, blockSize>>>(output, input_on_GPU, numRows, numCols, tuples_on_GPU,
-                          numTuples, responseBuffer1, responseBuffer2, threshold, sigmaratio, alpha, sigma0);
+   rotationInvariantCOSFIRE<<<gridSize, blockSize>>>(output, orientationResponses, input_on_GPU, numRows, numCols, tuples_on_GPU,
+                          numTuples, responseBuffer1, responseBuffer2, parameters);
    
     err = cudaGetLastError();
     if ( cudaSuccess != err )
@@ -86,15 +76,9 @@ void mexFunction( int nlhs, mxArray *plhs[],
        mexPrintf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
     }
 
-   //hopefully the final response (output) is now copied into the mex output buffer
+   /*Copy final response from GPU to CPU*/
    cudaMemcpy(outMatrix, output, numRows*numCols*sizeof(double), cudaMemcpyDeviceToHost);
    
-   //int i;
-   //double sum=0;
-   //for(i=0; i<numRows*numCols; i++) {
-	   //sum+=outMatrix[i];
-   //}
-   //mexPrintf("sum output = %f \n", sum);
    
    cudaFree(input_on_GPU);
    cudaFree(tuples_on_GPU);

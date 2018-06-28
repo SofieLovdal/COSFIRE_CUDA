@@ -25,13 +25,12 @@ __device__ void generate2DGaussian(double * output, double sigma, int sz, bool n
    int i, j;
    double sum=0.0;
    
-   /*TODO: Reduction(:+)*/
    for(i=0; i<sz; i++) {
 	   for(j=0; j<sz; j++) {
 		   sum += output[i*sz + j];
 		}
 	}
-   //printf("sum of 2D Gaussian=%f\n", sum);
+  
    output[linearIdx]/=sum;
    }
 }

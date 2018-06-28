@@ -63,8 +63,8 @@ asymmfilter.alpha     = 0.1;
 % CHASE_DB1 -> preprocessthresh = 0.1, thresh = 38
 output = struct();
 if nargout == 1 || nargout == 0
-    [output.respimage] = COSFIRE_CUDA(image, symmfilter, asymmfilter, 0.5);
-    %[output.respimage] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
+    %[output.respimage] = COSFIRE_CUDA(image, symmfilter, asymmfilter, 0.5);
+    [output.respimage] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
 elseif nargout == 2
     [output.respimage, oriensmap] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
 else
@@ -76,8 +76,7 @@ output.segmented = (output.respimage > 37);
 if nargout == 0
     figure; imagesc(output.respimage); colormap(gray); axis off; axis image; title('B-COSFIRE response image');
     figure; imagesc(output.segmented); colormap(gray); axis off; axis image; title('B-COSFIRE segmented image');
-end
-
+end    
 %stop timer
 toc;
 

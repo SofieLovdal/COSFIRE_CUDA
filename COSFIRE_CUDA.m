@@ -75,7 +75,17 @@ params_ht = symmfilter{1}.params.ht
 params_cosfire = symmfilter{1}.params.COSFIRE
 
 [hej, numtuples, ~] = size(tuples);
-rot1 = mexWrapper(reshape(image.',1,[]), nrows, ncols, tuples, numtuples, 0.5, 0);
+
+
+sigmaRatio = 0.5;
+threshold = 0.0;
+alpha = symm_params.COSFIRE.alpha;
+sigma0 = symm_params.COSFIRE.sigma0;
+numRotations = 12;
+rotationStep = numRotations/pi;
+necessaryParameters = [sigmaRatio, threshold, alpha, sigma0, rotationStep, numRotations];
+
+rot1 = mexWrapper(reshape(image.',1,[]), nrows, ncols, tuples, numtuples, necessaryParameters);
 
 rot1(1:32)
 %rot1 is a row major vector, now turn it back into a matrix
