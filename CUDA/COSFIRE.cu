@@ -41,22 +41,22 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
 					unsigned int const numRows, unsigned int const numCols,
 					double * tuples, unsigned int const numTuples,
 					double * responseBuffer1, double * responseBuffer2,
-					double * parameters, int rotationNumber)
+					double * parameters, int rotationCoefficient)
 {	   
     
     double * myTuple = &(tuples[3*threadIdx.x]);
     double * myResponse1 = &(responseBuffer1[numRows*numCols*threadIdx.x]);
     double * myResponse2 = &(responseBuffer2[numRows*numCols*threadIdx.x]);
     
-    double threshold = parameters[0];
-    double sigmaratio = parameters[1];
+    double sigmaratio = parameters[0];
+    double threshold = parameters[1];
     double alpha = parameters[2];
     double sigma0 = parameters[3];
     double rotationStep = parameters[4];
     
     double mySigma = myTuple[0];
     double myRho = myTuple[1];
-    double myPhi = myTuple[2]+rotationStep*rotationNumber;
+    double myPhi = myTuple[2]+rotationStep*rotationCoefficient;
     
     double * DoGfilter;
     DoGfilter = (double*)malloc(MAXSIZE*sizeof(double));
@@ -65,9 +65,11 @@ __global__ void COSFIRE_CUDA(double * output, double * const input,
 	int sz = ceil(mySigma*3) * 2 + 1; //related to calculating suitable block size for getDoG kernel launch
 	dim3 gridSize (1);
 	dim3 blockSize (sz, sz, 1);
+	
+	//getDoG necessary once only - one single sigma
     getDoG<<<1, blockSize>>>(DoGfilter, mySigma, sigmaratio); //launch one grid with blocksize sz. Every tuple-thread does this - dynamic parallelism.
 
-
+	//recover optimal blockSize from GPU architecture
 	dim3 blockSize2 (16, 16, 1);
     dim3 gridSize2 (ceil((double)numRows/16), ceil((double)numCols/16));
 	conv2<<<gridSize2, blockSize2>>>(myResponse1, input, numRows, numCols, DoGfilter, sz, sz);

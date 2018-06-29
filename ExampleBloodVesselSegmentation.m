@@ -31,8 +31,6 @@ function [output, oriensmap] = ExampleBloodVesselSegmentation( )
 % Requires the compiling of the mex-file for the fast implementation of the
 % max-blurring function in case it is not compiled already
 
-%start timer
-tic;
 
 if ~exist('./COSFIRE/dilate')
     BeforeUsing();
@@ -62,9 +60,12 @@ asymmfilter.alpha     = 0.1;
 % STARE -> preprocessthresh = 0.5, thresh = 40
 % CHASE_DB1 -> preprocessthresh = 0.1, thresh = 38
 output = struct();
+
 if nargout == 1 || nargout == 0
-    %[output.respimage] = COSFIRE_CUDA(image, symmfilter, asymmfilter, 0.5);
-    [output.respimage] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
+    tic;
+    [output.respimage] = COSFIRE_CUDA(image, symmfilter, asymmfilter, 0.5);
+    %[output.respimage] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
+    toc;
 elseif nargout == 2
     [output.respimage, oriensmap] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
 else
@@ -78,7 +79,7 @@ if nargout == 0
     figure; imagesc(output.segmented); colormap(gray); axis off; axis image; title('B-COSFIRE segmented image');
 end    
 %stop timer
-toc;
+
 
 %ensure that output is the same as in the original program
 reference=load('reference.mat');

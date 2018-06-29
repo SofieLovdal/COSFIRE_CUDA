@@ -84,7 +84,7 @@ symm_params.COSFIRE.rholist = 0:2:filter1.len;
 symm_params.COSFIRE.sigma0 = filter1.sigma0 / 6;
 symm_params.COSFIRE.alpha = filter1.alpha / 6;
 % Orientations
-numoriens = 1;
+numoriens = 12;
 symm_params.invariance.rotation.psilist = 0:pi/numoriens:pi-pi/numoriens;
 % Configuration
 symmfilter{1} = configureCOSFIRE(line1, round([y x]), symm_params);
@@ -100,7 +100,7 @@ asymm_params.COSFIRE.rholist = 0:2:filter2.len;
 asymm_params.COSFIRE.sigma0 = filter2.sigma0 / 6;
 asymm_params.COSFIRE.alpha = filter2.alpha / 6;
 % Orientations
-numoriens = 1;
+numoriens = 24;
 asymm_params.invariance.rotation.psilist = 0:2*pi/numoriens:(2*pi)-(2*pi/numoriens);
 % Configuration
 asymmfilter{1} = configureCOSFIRE(line1, round([y x]), asymm_params);
@@ -115,8 +115,9 @@ image = 1 - image;
 
 % Apply the symmetric B-COSFIRE to the input image
 %This returns the final response for each rotation
-rot1 = applyCOSFIRE(image, symmfilter)
-rot2 = applyCOSFIRE(image, asymmfilter);
+rot1 = applyCOSFIRE(image, symmfilter);
+%rot2 = applyCOSFIRE(image, asymmfilter);
+rot2{1} = zeros(size(image));
 %rot1{:, :, 1}
 %resp = rescaleImage(rot1{:, :, 1} .* mask, 0, 255);
 %figure; imagesc(resp); colormap(gray); axis off; axis image; title('B-COSFIRE segmented image');

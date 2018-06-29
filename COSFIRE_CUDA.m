@@ -66,40 +66,59 @@ figure; imagesc(image); colormap(gray); axis off; axis image; title('preprocesse
 % expect
 
 
+% Optimizations:
+% Remove on-device malloc
+% Remove unecessary duplicate computations
+% Upgrade hardware
+% Hashmap for removing unnecessary computations
+% Reduce kernel overhead
+% Optimize memory access patterns
+
 [nrows, ncols, ~] = size(image);
+%This assumes a single sigma for all tuples
+sigma1 = symmfilter{1}.tuples(1, 1);
+sigma2 = asymmfilter{1}.tules(1, 1);
 
-reshape(image.',1,[]); %seems fine
-tuples = symmfilter{1}.tuples(2:end, :);
+%only load the rho and phi values as the tuples: sigma is same for all
+tuples1 = symmfilter{1}.tuples(3:end, :);
+tuples2 = asymmfilter{1}.tuples(3:end, :);
 
-params_ht = symmfilter{1}.params.ht
-params_cosfire = symmfilter{1}.params.COSFIRE
-
-[hej, numtuples, ~] = size(tuples);
-
+[~, numtuples1, ~] = size(tuples1);
+[~, numtuples2, ~] = size(tuples2);
 
 sigmaRatio = 0.5;
 threshold = 0.0;
-alpha = symm_params.COSFIRE.alpha;
-sigma0 = symm_params.COSFIRE.sigma0;
-numRotations = 12;
-rotationStep = numRotations/pi;
-necessaryParameters = [sigmaRatio, threshold, alpha, sigma0, rotationStep, numRotations];
 
-rot1 = mexWrapper(reshape(image.',1,[]), nrows, ncols, tuples, numtuples, necessaryParameters);
+alpha1 = symm_params.COSFIRE.alpha;
+alpha2 = asymm_params.COSFIRE.alpha;
 
-rot1(1:32)
+sigma0_1 = symm_params.COSFIRE.sigma0;
+sigma0_2 = asymm_params.COSFIRE.sigma0;
+
+numRotations1 = 12;
+numRotations2 = 24;
+
+rotationStep1 = numRotations1/pi;
+rotationStep2 = numRotations2/pi;
+
+necessaryParameters1 = [sigma1, sigmaRatio, threshold, alpha1, sigma0_1, rotationStep1, numRotations1];
+%necessaryParameters2 = [sigmaRatio, threshold, alpha2, sigma0_2, rotationStep2, numRotations2];
+
+rot1 = mexWrapper(reshape(image.',1,[]), nrows, ncols, tuples1, numtuples1, necessaryParameters1);
+%rot2 = mexWrapper(reshape(image.',1,[]), nrows, ncols, tuples2, numtuples2, necessaryParameters2);
+%rot1(500:510)
 %rot1 is a row major vector, now turn it back into a matrix
 rot1 = (reshape(rot1, [ncols, nrows])).';
+%rot2 = (reshape(rot2, [ncols, nrows])).';
 %rot1 = applyCOSFIRE(image, symmfilter);
 %rot2 = applyCOSFIRE(image, asymmfilter);
 
 if nargout == 1 
     % The code as presented in the paper
-    % Here: take the pixelwise maximum of each rotation
     %rot1 = max(rot1{1},[],3);
     %rot2 = max(rot2{1},[],3);
     %resp = rot1 + rot2;
-    resp=rot1;
+    resp = rot1;
 elseif nargout == 2   
     % Modified code to also give the orientation map as output
     for i = 1:size(rot1{1},3)

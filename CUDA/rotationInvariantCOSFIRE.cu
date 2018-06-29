@@ -26,15 +26,28 @@ __global__ void rotationInvariantCOSFIRE(double * output, double * orientationRe
 	 
 	/*Achieves a COSFIRE response for each orientation. Launch a kernel 
 	 * that does this for each tuple of the orientation*/
-	 
+	
+	/*Each thread calculates one orientation-specific response and gets a pointer to their
+	 * own offset in the buffers*/ 
 	double * myResponseBuffer1 = &(responseBuffer1[numTuples*numRows*numCols*threadIdx.x]);
     double * myResponseBuffer2 = &(responseBuffer2[numTuples*numRows*numCols*threadIdx.x]);
-    double * myOrientationResponse = &(responseBuffer2[numRows*numCols*threadIdx.x]);
+    double * myOrientationResponse = &(orientationResponses[numRows*numCols*threadIdx.x]);
 	 	
 	dim3 gridSize(1, 1, 1);
     dim3 blockSize(numTuples, 1, 1);
+	
+	
+	//for rotation invariance, only rho is different so apply shiftPixels only to this
 	COSFIRE_CUDA<<<gridSize, blockSize>>>(myOrientationResponse, input, numRows, numCols, tuples,
                           numTuples, myResponseBuffer1, myResponseBuffer2, parameters, rotationCoefficient);
+    
+    
+    output[500]=1.0;
+    output[502]=1.0;
+    output[505]=100;                      
+    /*Wait for all responses to finish*/
+    __syncthreads();
+	cudaDeviceSynchronize();                      
                           
      /*Kernel achieves response for a single orientation, stores this in orientationReponses.*/
      

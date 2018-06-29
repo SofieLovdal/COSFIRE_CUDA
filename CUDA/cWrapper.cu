@@ -9,22 +9,35 @@ main() {
 	
 	double *input, *tuples, *output, *responseBuffer1, *responseBuffer2;
 	int numRows=20, numCols=20, numTuples=1, i;
-	double sigmaratio=0.5, threshold=0.5;
 	double *input_on_GPU, *tuples_on_GPU, *output_on_GPU;
 	cudaError err;
 	
 	double sigma0 = 0.5;
 	double alpha = 0.1167;
+	double sigmaRatio = 0.5;
+    double threshold = 0.0;
+	double numRotations = 12.0;
+	double rotationStep = numRotations/3.14;
+	
+	double * parameters = {sigmaRatio, threshold, alpha, sigma0, rotationStep, numRotations};
 	
 	input = (double*)malloc(numRows*numCols*sizeof(double));
 	tuples = (double*)malloc(3*numTuples*sizeof(double));
 	output = (double*)malloc(numRows*numCols*sizeof(double));
-	for(i=0; i<numRows*numCols; i++) {
-		input[i]=1;
+	
+	for(i=0; i<numRows; i++) {
+		for(j=0; j<numCols; j++)
+		if(i==j || i==j+1 || i==j-1) {
+			input[i*numCols + j]=1.0;
+		} else {
+			input[i*numCols + j]=0.0;
+		]		
 	}	
 	
-	for(i=0; i<numTuples*3; i++) {
-		tuples[i]=2.0;
+	for(i=0; i<numTuples*3; i+=3) {
+		tuples[i]=2.4;
+		tuples[i+1]=2*i;
+		tuples[i+2]=1.57+(i%2)*3.14;
 	}	
 
 	
