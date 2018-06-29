@@ -15,26 +15,24 @@
 
 /*returns the amount of unique elements in an array given that the array
  * is sorted in ascending order. Adapt to small arrays/segfault*/
-int numUniqueRhos(double *rhoList, int length, double *mapping) {
+int numUniqueRhos(double *rhoList, int length, double *mapping, double *uniqueRhos) {
    
    int i;
-   double value = tupleList[0];
+   double value = rhoList[0];
    mapping[0] = 0;
+   uniqueRhos[0] = value;
    int sum = 1;
    
    for(i=1; i<length, i++) {
 	   if (value != tupleList[i] ) {
 		   mapping[i]=sum;
+		   uniqueRhos[i]=value;
 		   sum++;
 	   } else {
 		   mapping[i]=sum;
 	   }	   	   
 	   value = tupleList[i];
    }
-   
-   if (value != tupleList[length-2]) {
-	   sum+=2;
-	   mapping[length]
    
    return sum;
 }   	   
@@ -49,7 +47,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
    int numRows, numCols, numTuples;
    double *input_on_GPU, *tuples_on_GPU, *parameters_on_GPU, *orientationResponses;
    double *parameters;
-   double *DoGfilter, *DoGResponse;
+   double *DoGfilter, *DoGResponse, *uniqueRhos;
    cudaError err;  
    int i, j;	
    
@@ -85,6 +83,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
    mexPrintf("numOrientations: %d \n", numOrientations);
    
    int numRhos = numUniqueRhos(tuples, numTuples, tupleToMaxBlurResponseMap);
+   double uniqueRhos[numRhos];
    
    /*Allocate space on GPU for the necessary variables */
    cudaMalloc((void**)&input_on_GPU, numRows*numCols*sizeof(double));
@@ -138,15 +137,22 @@ void mexFunction( int nlhs, mxArray *plhs[],
    /*Next: For each rho in the set of tuples, perform a maxblurring.*/
    /*This assumes symmetric filter, perhaps better to retrieve unique rhos in another way
     * Then, if you have unique number of rhos, you could allocate buffers based on that.*/
+   double blurSigma;
    for (i=0; i<numRhos; i++) {
-   	  double blurSigma = sigma0 + alpha*myRho; //CHANGE SIZE OF FILTER + NO NORMALIZATION OF VALUES
+   	  blurSigma = sigma0 + alpha*uniqueRhos[i]; //CHANGE SIZE OF FILTER + NO NORMALIZATION OF VALUES
       sz = ceil(blurSigma*3.0)*2+1;
 	  dim3 blockSize3(sz, sz, 1);
 	  getGaussian<<<1, blockSize3>>>(DoGfilter, blurSigma);
-      maxBlur<<<gridSize2, blockSize2>>>(myResponse2, myResponse1, numRows, numCols, DoGfilter, sz, sz);
+      maxBlur<<<gridSize2, blockSize2>>>(&maxBlurBuffer[i*numRows*numCols], DoGResponse, numRows, numCols, DoGfilter, sz, sz);
    }   
 	   
-	
+   /*FORALL rotation-directions {
+    *  FOR EACH rho-phi combination (tuple) {
+    *    shiftPixels ->> insert in buffer of size imageSize*numTuples
+    *  }
+    *  geometricMean ->> obtain output of one rotation-direction
+    * }
+    * END : maximum of all orientation responses 	
 	
    dim3 gridSize(1, 1, 1);
    dim3 blockSize(numOrientations, 1, 1);
