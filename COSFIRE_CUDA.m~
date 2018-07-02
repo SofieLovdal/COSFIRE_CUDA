@@ -122,9 +122,9 @@ rot2 = (reshape(rot2, [ncols, nrows])).';
 if nargout == 1 
     % The code as presented in the paper
     %rot1 = max(rot1{1},[],3);
-    %rot2 = max(rot2{1},[],3);
-    resp = rot1 + rot2;
-    %resp = rot1;
+    rot2 = max(rot2{1},[],3);
+    %resp = rot1 + rot2;
+    resp = rot1;
 elseif nargout == 2   
     % Modified code to also give the orientation map as output
     for i = 1:size(rot1{1},3)

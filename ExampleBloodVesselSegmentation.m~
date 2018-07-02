@@ -63,8 +63,8 @@ output = struct();
 
 if nargout == 1 || nargout == 0
     tic;
-    [output.respimage] = COSFIRE_CUDA(image, symmfilter, asymmfilter, 0.5);
-    %[output.respimage] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
+    %[output.respimage] = COSFIRE_CUDA(image, symmfilter, asymmfilter, 0.5);
+    [output.respimage] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
     toc;
 elseif nargout == 2
     [output.respimage, oriensmap] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
@@ -85,8 +85,8 @@ end
 reference=load('reference.mat');
 reference_symmfilter=load('reference_symmfilter.mat');
 difference = double(reference.ans.respimage-output.respimage);
-difference_symmetricfilter=double(reference_symmfilter.output.respimage-output.respimage);
+difference_symmetricfilter=double(reference_symmfilter.ans.respimage-output.respimage);
 %msgbox(['The norm of the difference is: ' num2str(norm(difference))]);
 Norm = norm(difference)
-Norm_symmetricfilter = norm(difference_symmetricfilter)
+%Norm_symmetricfilter = norm(difference_symmetricfilter);
 

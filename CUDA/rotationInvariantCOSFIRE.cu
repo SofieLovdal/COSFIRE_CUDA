@@ -41,10 +41,7 @@ __global__ void rotationInvariantCOSFIRE(double * output, double * orientationRe
 	COSFIRE_CUDA<<<gridSize, blockSize>>>(myOrientationResponse, input, numRows, numCols, tuples,
                           numTuples, myResponseBuffer1, myResponseBuffer2, parameters, rotationCoefficient);
     
-    
-    output[500]=1.0;
-    output[502]=1.0;
-    output[505]=100;                      
+                    
     /*Wait for all responses to finish*/
     __syncthreads();
 	cudaDeviceSynchronize();                      

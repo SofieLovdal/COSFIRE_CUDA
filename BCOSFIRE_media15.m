@@ -116,8 +116,8 @@ image = 1 - image;
 % Apply the symmetric B-COSFIRE to the input image
 %This returns the final response for each rotation
 rot1 = applyCOSFIRE(image, symmfilter);
-%rot2 = applyCOSFIRE(image, asymmfilter);
-rot2{1} = zeros(size(image));
+rot2 = applyCOSFIRE(image, asymmfilter);
+%rot2{1} = zeros(size(image));
 %rot1{:, :, 1}
 %resp = rescaleImage(rot1{:, :, 1} .* mask, 0, 255);
 %figure; imagesc(resp); colormap(gray); axis off; axis image; title('B-COSFIRE segmented image');

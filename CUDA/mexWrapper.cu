@@ -5,111 +5,98 @@
 #include "mex.h"
 #include "gpu/mxGPUArray.h"
 #include "matrix.h"
-#include "rotationInvariantCOSFIRE.cu"
 #include "cuda.h"
 #include <stdio.h>
+#include "getDoG.cu"
+#include "maxBlur.cu"
+#include "convolution.cu"
+#include "geometricMean.cu"
+#include "pixelwiseMax.cu"
+#include "shiftPixels.cu"
+#include "getGaussian.cu"
 
 /*Number of parameters passed to function as well as maximum expected rho-value*/
 #define NUMPARAMS 7
-#define MAXRHO 100
 
-/*returns the amount of unique elements in an array given that the array
- * is sorted in ascending order. Adapt to small arrays/segfault*/
-int numUniqueRhos(double *rhoList, int length, double *mapping, double *uniqueRhos) {
+/*Input: Array of the unique Rhos in the tuples
+ * Output: An array of the same length as the number of tuples, associating each tuple with 
+ * the index of the corresponding rho in the array of uniqueRhos*/
+void mapUniqueRhos(double *uniqueRhos, int numRhos, int *mapping, double *tuples, int numTuples) {
    
-   int i;
-   double value = rhoList[0];
-   mapping[0] = 0;
-   uniqueRhos[0] = value;
-   int sum = 1;
-   
-   for(i=1; i<length, i++) {
-	   if (value != tupleList[i] ) {
-		   mapping[i]=sum;
-		   uniqueRhos[i]=value;
-		   sum++;
-	   } else {
-		   mapping[i]=sum;
-	   }	   	   
-	   value = tupleList[i];
-   }
-   
-   return sum;
-}   	   
+	int i, j;
+	double value;
+	double epsilon = 0.0001;
+	for(i=0; i<numRhos; i++) {
+		value = uniqueRhos[i];
+		for(j=0; j<numTuples*2; j+=2) {
+			if(abs(tuples[j]-value)<epsilon) {
+				mapping[j/2]=i;
+			}	
+		}
+	}				
+}
+
 
 /* the gateway function */
 void mexFunction( int nlhs, mxArray *plhs[],
                   int nrhs, const mxArray *prhs[])
 {
-   //The following is absolutely necessary to pass: input (preprocessed image) with dims, tuples, numTuples, sigmaratio, threshold and other parameters
-   //Buffers and similar can be created here, e.g. output, responseBuffer
-   double *input, *tuples, *output, *maxBlurBuffer, *responseBuffer2, *outMatrix;
-   int numRows, numCols, numTuples;
-   double *input_on_GPU, *tuples_on_GPU, *parameters_on_GPU, *orientationResponses;
-   double *parameters;
-   double *DoGfilter, *DoGResponse, *uniqueRhos;
-   cudaError err;  
-   int i, j;	
-   
-   if(nrhs != 7) {
-      mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nrhs", "Seven inputs required.");
-   }
-   if(nlhs != 1) {
-      mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nlhs", "One output required.");
+   /*The input of the program*/
+   double *input, *tuples, *parameters, *uniqueRhos;
+   int numRows, numCols, numTuples, i, j;
+   cudaError err;
+    
+   if(nrhs != 7 || nlhs!=1) {
+      mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nrhs || nlhs", "Seven inputs and one output required");
    }
    
    int gpuInit = mxInitGPU();
    
+   /*Parse input. Tuples is a set of (rho, phi), sigma is same for all*/
    input = mxGetPr(prhs[0]);
    numRows = mxGetScalar(prhs[1]);
    numCols = mxGetScalar(prhs[2]);
    tuples = mxGetPr(prhs[3]);
    numTuples = mxGetScalar(prhs[4]);
    parameters = mxGetPr(prhs[5]);
+   uniqueRhos = mxGetPr(prhs[6]);
    
    double sigma = parameters[0];
    double sigmaRatio = parameters[1];
    double threshold = parameters[2];
    double alpha = parameters[3];
    double sigma0 = parameters[4];
-   double rotationStep = parameters[5]
+   double rotationStep = parameters[5];
    int numOrientations = parameters[6];
+   double numRhos = parameters[7];
    
-   /*This array keeps track of which tuple can be linked to which maxBlurring-response.
-    * The index denotes the tuple, and the contents of corresponding element denotes
-    * the index (offset) in the maxBlurBuffer.*/
-   int tupleToMaxBlurResponseMap[numTuples];
-   
-   mexPrintf("numOrientations: %d \n", numOrientations);
-   
-   int numRhos = numUniqueRhos(tuples, numTuples, tupleToMaxBlurResponseMap);
-   double uniqueRhos[numRhos];
-   
+   double *input_on_GPU, *tuples_on_GPU, *parameters_on_GPU;
+   double *DoGResponse, *maxBlurBuffer, *shiftedPixelsBuffer, *orientationResponses;
+   double *output, *outMatrix;
+    
    /*Allocate space on GPU for the necessary variables */
    cudaMalloc((void**)&input_on_GPU, numRows*numCols*sizeof(double));
-   cudaMalloc((void**)&tuples_on_GPU, 3*numTuples*sizeof(double));
+   cudaMalloc((void**)&tuples_on_GPU, 2*numTuples*sizeof(double));
+   cudaMalloc((void**)&parameters_on_GPU, 7*sizeof(double));
+   
    cudaMalloc((void**)&DoGResponse, numRows*numCols*sizeof(double));
    cudaMalloc((void**)&maxBlurBuffer, numRhos*numRows*numCols*sizeof(double));
-   
-   cudaMalloc((void**)&responseBuffer2, numOrientations*numTuples*numRows*numCols*sizeof(double));
+   cudaMalloc((void**)&shiftedPixelsBuffer, numTuples*numRows*numCols*sizeof(double));
    cudaMalloc((void**)&orientationResponses, numOrientations*numRows*numCols*sizeof(double));
-   cudaMalloc((void**)&parameters_on_GPU, 6*sizeof(double));
    cudaMalloc((void**)&output, numRows*numCols*sizeof(double));
    
    err = cudaGetLastError();
-   if ( cudaSuccess != err )
-   {
-      mexPrintf("cudaCheckError() failed at cudaMemcpy %s\n", cudaGetErrorString( err ) );
+   if ( cudaSuccess != err ) { 
+      mexPrintf("cudaCheckError() failed at cudaMalloc %s\n", cudaGetErrorString( err ) );
    }
    
-   /*Copy over some input arguments to the GPU before calling kernel*/
+   /*Copy over the input arguments to the GPU before calling kernel*/
    cudaMemcpy(input_on_GPU, input, numRows*numCols*sizeof(double), cudaMemcpyHostToDevice);
    cudaMemcpy(tuples_on_GPU, tuples, 2*numTuples*sizeof(double), cudaMemcpyHostToDevice);
    cudaMemcpy(parameters_on_GPU, parameters, 7*sizeof(double), cudaMemcpyHostToDevice);
    
    err = cudaGetLastError();
-   if ( cudaSuccess != err )
-   {
+   if ( cudaSuccess != err ) {
       mexPrintf("cudaCheckError() failed at cudaMemcpy %s\n", cudaGetErrorString( err ) );
    }
    	
@@ -121,22 +108,38 @@ void mexFunction( int nlhs, mxArray *plhs[],
    /*The following lines of code governs the algorithm flow*/
    
    /*allocate a buffer on the GPU for the 2D DoG filter*/
-   int sz = ceil(mySigma*3) * 2 + 1;
-   cudaMalloc((void**)&DoGfilter, sz*sz*sizeof(double));
+   double *DoGfilter;
+   int sz = ceil(sigma*3) * 2 + 1;
+   cudaMalloc((void**)&DoGfilter, 100*sz*sz*sizeof(double)); //allocate one buffer that is large enough for all DoGfilters/Gaussians for the maxBlurring. Maybe call it filterBufferinstead
+   
+    err = cudaGetLastError();
+    if ( cudaSuccess != err ) {
+       mexPrintf("cudaCheckError() failed at cudaMalloc DoGfilter %s\n", cudaGetErrorString( err ) );
+    }
    
    dim3 gridSize(1, 1, 1);
    dim3 blockSize(sz, sz, 1);
    getDoG<<<gridSize, blockSize>>>(DoGfilter, sigma, sigmaRatio);
    
+    err = cudaGetLastError();
+    if ( cudaSuccess != err ) {
+       mexPrintf("cudaCheckError() failed at getDoG %s\n", cudaGetErrorString( err ) );
+    }
+
    //recover optimal blockSize from GPU architecture
+   /*If only one stream is used, kernel launches are queued and executed sequentially, so supposedly no cudadevicesynchronize is needed*/
    /*convolute input with DoG filter*/
-   dim3 blockSize2 (16, 16, 1);
+   dim3 blockSize2 (32, 32, 1);
    dim3 gridSize2 (ceil((double)numRows/16), ceil((double)numCols/16));
-   conv2<<<gridSize2, blockSize2>>>(DoGResponse, input, numRows, numCols, DoGfilter, sz, sz);
-   
-   /*Next: For each rho in the set of tuples, perform a maxblurring.*/
-   /*This assumes symmetric filter, perhaps better to retrieve unique rhos in another way
-    * Then, if you have unique number of rhos, you could allocate buffers based on that.*/
+   conv2<<<gridSize2, blockSize2>>>(DoGResponse, input_on_GPU, numRows, numCols, DoGfilter, sz, sz);
+    err = cudaGetLastError();
+    if ( cudaSuccess != err ) {
+       mexPrintf("cudaCheckError() failed at conv2 %s\n", cudaGetErrorString( err ) );
+    }
+  
+   /*Next: For each rho in the set of tuples, perform a maxblurring. 
+    * We have the unique rhos and number of unique rhos and the actual list of rhos, 
+    * so just do the maxBlurring for all unique rhos now*/
    double blurSigma;
    for (i=0; i<numRhos; i++) {
    	  blurSigma = sigma0 + alpha*uniqueRhos[i]; //CHANGE SIZE OF FILTER + NO NORMALIZATION OF VALUES
@@ -144,7 +147,30 @@ void mexFunction( int nlhs, mxArray *plhs[],
 	  dim3 blockSize3(sz, sz, 1);
 	  getGaussian<<<1, blockSize3>>>(DoGfilter, blurSigma);
       maxBlur<<<gridSize2, blockSize2>>>(&maxBlurBuffer[i*numRows*numCols], DoGResponse, numRows, numCols, DoGfilter, sz, sz);
-   }   
+   }
+    if ( cudaSuccess != err ) {
+       mexPrintf("cudaCheckError() failed at getGaussian/maxBlur %s\n", cudaGetErrorString( err ) );
+    }
+   
+    /*This array keeps track of which tuple can be linked to which maxBlurring-response.
+    * The index denotes the tuple, and the contents of corresponding element denotes
+    * the index (offset) in the maxBlurBuffer.*/
+   int mapping[numTuples];
+   mapUniqueRhos(uniqueRhos, numRhos, mapping, tuples, numTuples);
+   
+   double rho, phi;
+   for(i=0; i<numOrientations; i++) {
+	   for(j=0; j<numTuples; j++) { //as input argument, give the pointer to the corresponding max-blurred output!
+		   rho = tuples[2*j];
+		   phi = tuples[2*j+1] + rotationStep*i; //phi is dependant on orientation currently considered
+		   shiftPixels<<<gridSize2, blockSize2>>>(&shiftedPixelsBuffer[j*numRows*numCols], &maxBlurBuffer[mapping[j]*numRows*numCols], numRows, numCols, rho, phi);
+		}
+		geometricMean<<<gridSize2, blockSize2>>>(&orientationResponses[i*numRows*numCols], shiftedPixelsBuffer, numRows, numCols, numTuples, threshold);
+	}
+	pixelwiseMax<<<gridSize2, blockSize2>>>(output, orientationResponses, numRows, numCols, numOrientations);	   
+	if ( cudaSuccess != err ) {
+       mexPrintf("cudaCheckError() failed at shiftPixels/geometricMean/pixelwiseMax %s\n", cudaGetErrorString( err ) );
+    }      
 	   
    /*FORALL rotation-directions {
     *  FOR EACH rho-phi combination (tuple) {
@@ -152,40 +178,25 @@ void mexFunction( int nlhs, mxArray *plhs[],
     *  }
     *  geometricMean ->> obtain output of one rotation-direction
     * }
-    * END : maximum of all orientation responses 	
-	
-   dim3 gridSize(1, 1, 1);
-   dim3 blockSize(numOrientations, 1, 1);
-   /*Make kernel call with the GPU variables
-    * move management out here 
-    * DoG
-    * for for blurring
-    * for for orientation
-    * pixelwise max*/
-   rotationInvariantCOSFIRE<<<gridSize, blockSize>>>(output, orientationResponses, input_on_GPU, numRows, numCols, tuples_on_GPU,
-                          numTuples, responseBuffer1, responseBuffer2, parameters_on_GPU);
+    * END : maximum of all orientation responses
    
-    err = cudaGetLastError();
-    if ( cudaSuccess != err )
-    {
-       mexPrintf("cudaCheckError() failed at COSFIRE_CUDA call %s\n", cudaGetErrorString( err ) );
-    }
-
+  
    /*Copy final response from GPU to CPU*/
    cudaMemcpy(outMatrix, output, numRows*numCols*sizeof(double), cudaMemcpyDeviceToHost);
    
     err = cudaGetLastError();
-    if ( cudaSuccess != err )
-    {
+    if ( cudaSuccess != err ) {
        mexPrintf("cudaCheckError() failed at copying output from GPU to CPU %s\n", cudaGetErrorString( err ) );
     }
     
    cudaFree(input_on_GPU);
    cudaFree(tuples_on_GPU);
-   cudaFree(output);
-   cudaFree(responseBuffer1);
-   cudaFree(responseBuffer2);
+   cudaFree(parameters_on_GPU);
+   cudaFree(DoGResponse);
+   cudaFree(DoGfilter);
+   cudaFree(maxBlurBuffer);
+   cudaFree(shiftedPixelsBuffer);
    cudaFree(orientationResponses);
-   cudaFree(parameters);
-   
+   cudaFree(output);
+ 
 }
