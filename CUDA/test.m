@@ -1,34 +1,45 @@
-%test sending matrix to gpu cuda kernel, perform something on it and send back
-%seems to work now! beware of order of arguments feval, thread indexing in
-%kernel, block dimensions so that it covers and appropriate slice etc.
+%tests the convolution CUDA kernel. getDoG should be fine, gives error in the
+%order of 10e-16.
+%convolution should also be fine, after half wave rectification gives error
+%in the order of 10e-17.
 
-image = double(imread('./data/RETINA_example/test/images/01_test.tif')) ./ 255;
+image = double(imread('01_test.tif')) ./ 255;
 image = rgb2gray(image);
+
+sz = ceil(sigma*3) * 2 + 1;
+
+g1 = fspecial('gaussian',sz,sigma);    
+g2 = fspecial('gaussian',sz,sigma*sigmaRatio);
+G = g2 - g1;
+
+reference = conv2(image, G, 'same');
+reference(find(reference < 0)) = 0; %half-wave rectification
 
 inputMatrix = gpuArray(image);
 output = zeros(size(inputMatrix));
 outputMatrix = gpuArray(output);
-size(output);
 
 % 1. Create CUDAKernel object.
-kernel = parallel.gpu.CUDAKernel('testKernel.ptx','testKernel.cu','test');
+kernel = parallel.gpu.CUDAKernel('convolution.ptx','convolution.cu','conv2');
 
 % 2. Set object properties.
 [nrows, ncols, ~] = size(inputMatrix);
 
-blockSize = 256;
-kernel.ThreadBlockSize = [blockSize, 1, 3];
-kernel.GridSize = [ceil(nrows/blockSize), ncols];
+kernel.ThreadBlockSize = [32, 32, 1];
+kernel.GridSize = [ceil(nrows/32), ceil(ncols/32)];
+
+G=gpuArray(G);
 
 % 3. Call feval with defined inputs.
-outputMatrix=feval(kernel,outputMatrix,inputMatrix, nrows, ncols);
+outputMatrix=feval(kernel,outputMatrix,inputMatrix, ncols, nrows, G, sz, sz);
 
 output = gather(outputMatrix);
 
-figure; imagesc(image); colormap(gray); axis off; axis image; title('original image');
-figure; imagesc(output); colormap(gray); axis off; axis image; title('After GPU');
+%figure; imagesc(image); colormap(gray); axis off; axis image; title('original image');
+%figure; imagesc(output); colormap(gray); axis off; axis image; title('After GPU');
 
-difference = double(image-output);
-msgbox(['The norm of the difference is: ' num2str(norm(difference))]);
+difference = double(reference-output);
+difference(200, :)
+Norm = norm(difference)
 
 %TRY THIS WITH A GREYSCALE IMAGE AND MAKE IT DO WHAT YOU WANT IT TO DO

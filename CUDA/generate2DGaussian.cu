@@ -18,19 +18,22 @@ __device__ void generate2DGaussian(double * output, double sigma, int sz, bool n
    output[linearIdx] = exp(-(pow((double)(distx), 2.0)+pow((double)(disty), 2.0))/(2*(pow(sigma, 2.0))));
    
    if(normalize==true) {
-   
-    __syncthreads();
-	cudaDeviceSynchronize(); 
-   
-   int i, j;
-   double sum=0.0;
-   
-   for(i=0; i<sz; i++) {
-	   for(j=0; j<sz; j++) {
-		   sum += output[i*sz + j];
+	   
+	   /*wait until all threads have assigned a value to their index in the output array*/
+	   __syncthreads();
+	   
+	   int i, j;
+	   double sum=0.0;
+	   
+	   for(i=0; i<sz; i++) {
+		   for(j=0; j<sz; j++) {
+			   sum += output[i*sz + j];
+			}
 		}
-	}
-  
-   output[linearIdx]/=sum;
+	   
+	   /*Let all threads calculate the sum before changing the value of the output array*/	
+	   __syncthreads();	
+	  
+	   output[linearIdx]/=sum;
    }
 }

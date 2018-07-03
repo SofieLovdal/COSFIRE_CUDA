@@ -1,6 +1,6 @@
 %Tests the COSFIRE.cu function that controls flow of kernels and puts
 %everything together
-sigma=2;
+sigma=2.4;
 sigmaRatio=0.5;
 sz = ceil(sigma*3) * 2 + 1;
 

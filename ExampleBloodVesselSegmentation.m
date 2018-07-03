@@ -86,7 +86,12 @@ reference=load('reference.mat');
 reference_symmfilter=load('reference_symmfilter.mat');
 difference = double(reference.ans.respimage-output.respimage);
 difference_symmetricfilter=double(reference_symmfilter.output.respimage-output.respimage);
-%msgbox(['The norm of the difference is: ' num2str(norm(difference))]);
+
 Norm = norm(difference)
 Norm_symmetricfilter = norm(difference_symmetricfilter)
+
+ground_truth = imread('01_manual1.gif');
+EvaluateINRIA(output.segmented, ground_truth)
+EvaluateINRIA(reference.ans.segmented, ground_truth)
+
 

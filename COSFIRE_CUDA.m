@@ -124,7 +124,7 @@ if nargout == 1
     %rot1 = max(rot1{1},[],3);
     %rot2 = max(rot2{1},[],3);
     resp = rot1 + rot2;
-    %resp = rot1;
+    %resp = rot1
 elseif nargout == 2   
     % Modified code to also give the orientation map as output
     for i = 1:size(rot1{1},3)
@@ -136,3 +136,7 @@ elseif nargout == 2
 end
 
 resp = rescaleImage(resp .* mask, 0, 255);
+
+%[reference sig] = getDoG(image, 2.4, 1, 0.5, 0, 0);
+%difference = double(reference-rot1)
+%Norm = norm(difference)

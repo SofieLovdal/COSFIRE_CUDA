@@ -16,7 +16,7 @@
 #include "getGaussian.cu"
 
 /*Number of parameters passed to function as well as maximum expected rho-value*/
-#define NUMPARAMS 7
+#define NUMPARAMS 8
 
 /*Input: Array of the unique Rhos in the tuples
  * Output: An array of the same length as the number of tuples, associating each tuple with 
@@ -77,7 +77,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
    /*Allocate space on GPU for the necessary variables */
    cudaMalloc((void**)&input_on_GPU, numRows*numCols*sizeof(double));
    cudaMalloc((void**)&tuples_on_GPU, 2*numTuples*sizeof(double));
-   cudaMalloc((void**)&parameters_on_GPU, 7*sizeof(double));
+   cudaMalloc((void**)&parameters_on_GPU, NUMPARAMS*sizeof(double));
    
    cudaMalloc((void**)&DoGResponse, numRows*numCols*sizeof(double));
    cudaMalloc((void**)&maxBlurBuffer, numRhos*numRows*numCols*sizeof(double));
@@ -93,7 +93,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
    /*Copy over the input arguments to the GPU before calling kernel*/
    cudaMemcpy(input_on_GPU, input, numRows*numCols*sizeof(double), cudaMemcpyHostToDevice);
    cudaMemcpy(tuples_on_GPU, tuples, 2*numTuples*sizeof(double), cudaMemcpyHostToDevice);
-   cudaMemcpy(parameters_on_GPU, parameters, 7*sizeof(double), cudaMemcpyHostToDevice);
+   cudaMemcpy(parameters_on_GPU, parameters, NUMPARAMS*sizeof(double), cudaMemcpyHostToDevice);
    
    err = cudaGetLastError();
    if ( cudaSuccess != err ) {
@@ -125,28 +125,30 @@ void mexFunction( int nlhs, mxArray *plhs[],
     if ( cudaSuccess != err ) {
        mexPrintf("cudaCheckError() failed at getDoG %s\n", cudaGetErrorString( err ) );
     }
-
+	cudaDeviceSynchronize();
    //recover optimal blockSize from GPU architecture
    /*If only one stream is used, kernel launches are queued and executed sequentially, so supposedly no cudadevicesynchronize is needed*/
    /*convolute input with DoG filter*/
    dim3 blockSize2 (32, 32, 1);
-   dim3 gridSize2 (ceil((double)numRows/16), ceil((double)numCols/16));
+   dim3 gridSize2 (ceil((double)numRows/32), ceil((double)numCols/32));
    conv2<<<gridSize2, blockSize2>>>(DoGResponse, input_on_GPU, numRows, numCols, DoGfilter, sz, sz);
     err = cudaGetLastError();
     if ( cudaSuccess != err ) {
        mexPrintf("cudaCheckError() failed at conv2 %s\n", cudaGetErrorString( err ) );
     }
-  
+  cudaDeviceSynchronize();
    /*Next: For each rho in the set of tuples, perform a maxblurring. 
     * We have the unique rhos and number of unique rhos and the actual list of rhos, 
-    * so just do the maxBlurring for all unique rhos now*/
+    * so just do the maxBlurring for all unique rhos now */
    double blurSigma;
    for (i=0; i<numRhos; i++) {
    	  blurSigma = sigma0 + alpha*uniqueRhos[i]; //CHANGE SIZE OF FILTER + NO NORMALIZATION OF VALUES
       sz = ceil(blurSigma*3.0)*2+1;
 	  dim3 blockSize3(sz, sz, 1);
 	  getGaussian<<<1, blockSize3>>>(DoGfilter, blurSigma);
+	  cudaDeviceSynchronize();
       maxBlur<<<gridSize2, blockSize2>>>(&maxBlurBuffer[i*numRows*numCols], DoGResponse, numRows, numCols, DoGfilter, sz, sz);
+      cudaDeviceSynchronize();
    }
     if ( cudaSuccess != err ) {
        mexPrintf("cudaCheckError() failed at getGaussian/maxBlur %s\n", cudaGetErrorString( err ) );
@@ -154,7 +156,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
    
     /*This array keeps track of which tuple can be linked to which maxBlurring-response.
     * The index denotes the tuple, and the contents of corresponding element denotes
-    * the index (offset) in the maxBlurBuffer.*/
+    * the index (offset) in the maxBlurBuffer. */
    int mapping[numTuples];
    mapUniqueRhos(uniqueRhos, numRhos, mapping, tuples, numTuples);
    
@@ -165,8 +167,11 @@ void mexFunction( int nlhs, mxArray *plhs[],
 		   phi = tuples[2*j+1] + rotationStep*i; //phi is dependant on orientation currently considered
 		   shiftPixels<<<gridSize2, blockSize2>>>(&shiftedPixelsBuffer[j*numRows*numCols], &maxBlurBuffer[mapping[j]*numRows*numCols], numRows, numCols, rho, phi);
 		}
+		cudaDeviceSynchronize();
 		geometricMean<<<gridSize2, blockSize2>>>(&orientationResponses[i*numRows*numCols], shiftedPixelsBuffer, numRows, numCols, numTuples, threshold);
+		cudaDeviceSynchronize();
 	}
+	cudaDeviceSynchronize();
 	pixelwiseMax<<<gridSize2, blockSize2>>>(output, orientationResponses, numRows, numCols, numOrientations);	   
 	if ( cudaSuccess != err ) {
        mexPrintf("cudaCheckError() failed at shiftPixels/geometricMean/pixelwiseMax %s\n", cudaGetErrorString( err ) );
@@ -182,6 +187,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
    
   
    /*Copy final response from GPU to CPU*/
+   cudaDeviceSynchronize();
    cudaMemcpy(outMatrix, output, numRows*numCols*sizeof(double), cudaMemcpyDeviceToHost);
    
     err = cudaGetLastError();

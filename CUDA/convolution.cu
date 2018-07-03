@@ -42,5 +42,5 @@ __global__ void conv2(double * output, double * const input, unsigned int const 
 			}
 		}	
 	}
-	output[linearIdx] = (sum>0.0 ? sum : 0.0); //here: half-wave rectification??
+	output[linearIdx] = (sum>0.0 ? (sum) : 0.0); //here: half-wave rectification??
 }

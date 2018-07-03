@@ -26,6 +26,6 @@ __global__ void geometricMean(double * output, double * const input,
 	   product*=input[linearIdx+i*numRows*numCols];
    }
    
-   double mu = pow(product, (1.0/(double)numResponses));
-   output[linearIdx] = mu; //here: (no)thresholding
+   output[linearIdx] = pow(product, (1.0/(double)numResponses)); //thresholding??
+   
 }

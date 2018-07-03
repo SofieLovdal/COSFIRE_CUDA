@@ -15,14 +15,10 @@ __global__ void getDoG(double * output, double sigma, double sigmaratio) {
 	__shared__ double g1[900];
 	__shared__ double g2[900];
 	
-    __syncthreads(); //perhaps remove this
-	cudaDeviceSynchronize();  
-	
 	generate2DGaussian(g1, sigma, sz, true);
 	generate2DGaussian(g2, sigma*sigmaratio, sz, true);
 	
 	__syncthreads();
-	cudaDeviceSynchronize();
 	
 	output[linearIdx] = g2[linearIdx]-g1[linearIdx];
 
