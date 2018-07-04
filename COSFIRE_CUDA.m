@@ -90,7 +90,7 @@ tuples2 = asymmfilter{1}.tuples(3:end, :);
 uniqueRhos1 = unique(tuples1(1,:));
 [~, numRhos1] = size(uniqueRhos1);
 
-uniqueRhos2 = unique(tuples2(1,:))
+uniqueRhos2 = unique(tuples2(1,:));
 [~, numRhos2] = size(uniqueRhos2);
 
 sigmaRatio = 0.5;
@@ -105,11 +105,11 @@ sigma0_2 = asymm_params.COSFIRE.sigma0;
 numRotations1 = 12;
 numRotations2 = 24;
 
-rotationStep1 = numRotations1/pi;
-rotationStep2 = numRotations2/(2*pi);
+rotationStep1 = pi/(numRotations1);
+rotationStep2 = (2*pi)/(numRotations2); %Check this!!!
 
-necessaryParameters1 = [sigma1, sigmaRatio, threshold, alpha1, sigma0_1, rotationStep1, numRotations1, numRhos1]
-necessaryParameters2 = [sigma2, sigmaRatio, threshold, alpha2, sigma0_2, rotationStep2, numRotations2, numRhos2]
+necessaryParameters1 = [sigma1, sigmaRatio, threshold, alpha1, sigma0_1, rotationStep1, numRotations1, numRhos1];
+necessaryParameters2 = [sigma2, sigmaRatio, threshold, alpha2, sigma0_2, rotationStep2, numRotations2, numRhos2];
 tic;
 rot1 = mexWrapper(reshape(image.',1,[]), nrows, ncols, tuples1, numtuples1, necessaryParameters1, uniqueRhos1);
 rot2 = mexWrapper(reshape(image.',1,[]), nrows, ncols, tuples2, numtuples2, necessaryParameters2, uniqueRhos2);
@@ -124,7 +124,7 @@ if nargout == 1
     %rot1 = max(rot1{1},[],3);
     %rot2 = max(rot2{1},[],3);
     resp = rot1 + rot2;
-    %resp = rot1
+    %resp = rot2;
 elseif nargout == 2   
     % Modified code to also give the orientation map as output
     for i = 1:size(rot1{1},3)
@@ -136,7 +136,21 @@ elseif nargout == 2
 end
 
 resp = rescaleImage(resp .* mask, 0, 255);
-
+%norm of geometric mean, first orientation is 1.7e10-5! So also accurate
+%reference_maxblurred = load('blurredRef1.mat');
+%size(reference_maxblurred.hashvaluelist{5})
+%size(resp)
+%reference_maxblurred = reference_maxblurred.hashvaluelist{5};
+%reference_maxblurred = rescaleImage(reference_maxblurred.*mask, 0, 255);
+%reference_geometricMean = load('geometricMeanOutput1.mat');
+%reference_geometricMean = reference_geometricMean.output;
+%reference_geometricMean = rescaleImage(reference_geometricMean.*mask, 0, 255);
+%difference_shifted = double (reference_geometricMean-resp);
+%difference_shifted(250, :);
+%norm_differenceshifted = norm(difference_shifted)
+%difference_maxblurred = double(reference_maxblurred-resp);
+%difference_maxblurred(250, :); %The difference here is in order 10^-6 with total norm 0.0001. Should be okay!
+%norm_maxblurred = norm(difference_maxblurred)
 %[reference sig] = getDoG(image, 2.4, 1, 0.5, 0, 0);
 %difference = double(reference-rot1)
 %Norm = norm(difference)

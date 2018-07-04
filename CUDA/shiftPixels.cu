@@ -3,9 +3,6 @@
 * Sofie Lovdal 18.6.2018
 */
 
-/*WHEN PASSING FROM MATLAB: COLUMN-MAJOR ORDER WHICH IS TAKEN INTO
- * ACCOUNT HERE, CHANGE DELTAX AND DELTAY BACK LATER. WICKED!!
- * Apart from that, it should work by now*/
 __global__ void shiftPixels(double * output, double * const input, 
 						  unsigned int const numRows, unsigned int const numCols,
 						  double const rho, double const phi)

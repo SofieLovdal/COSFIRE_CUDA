@@ -72,7 +72,7 @@ else
     error('ERROR: too many output arguments.');
 end
 
-output.segmented = (output.respimage > 37);
+output.segmented = (output.respimage > 37); %or 36?
 
 if nargout == 0
     figure; imagesc(output.respimage); colormap(gray); axis off; axis image; title('B-COSFIRE response image');
@@ -84,11 +84,13 @@ end
 %ensure that output is the same as in the original program
 reference=load('reference.mat');
 reference_symmfilter=load('reference_symmfilter.mat');
+
 difference = double(reference.ans.respimage-output.respimage);
 difference_symmetricfilter=double(reference_symmfilter.output.respimage-output.respimage);
 
+%maxElement=max(difference)
 Norm = norm(difference)
-Norm_symmetricfilter = norm(difference_symmetricfilter)
+%Norm_symmetricfilter = norm(difference_symmetricfilter)
 
 ground_truth = imread('01_manual1.gif');
 EvaluateINRIA(output.segmented, ground_truth)
