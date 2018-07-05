@@ -36,9 +36,16 @@ if ~exist('./COSFIRE/dilate')
     BeforeUsing();
 end
 
-
 % Example with an image from DRIVE data set
-image = double(imread('./data/RETINA_example/test/images/01_test.tif')) ./ 255;
+for i=1:9
+   images{i} = double(imread(strcat('./DRIVE/test/images/0', num2str(i, '%d'), '_test.tif'))) ./ 255;
+   ground_truth{i} = double(imread(strcat('./DRIVE/test/2nd_manual/0', num2str(i, '%d'), + '_manual2.gif'))) ./ 255;
+end
+
+for i=10:20
+    images{i} = double(imread(strcat('./DRIVE/test/images/', num2str(i, '%d'), '_test.tif'))) ./ 255;
+    ground_truth{i} = double(imread(strcat('./DRIVE/test/2nd_manual/', num2str(i, '%d'), '_manual2.gif'))) ./ 255;
+end    
 
 %% Symmetric filter params
 symmfilter = struct();
@@ -60,40 +67,51 @@ asymmfilter.alpha     = 0.1;
 % STARE -> preprocessthresh = 0.5, thresh = 40
 % CHASE_DB1 -> preprocessthresh = 0.1, thresh = 38
 output = struct();
+timings=zeros(100, 10);
+totalTimings=zeros(100, 1);
 
+%run the program 100 times, 5 times per input image.
+for i=1:100
 if nargout == 1 || nargout == 0
     tic;
-    [output.respimage] = COSFIRE_CUDA(image, symmfilter, asymmfilter, 0.5);
-    %[output.respimage] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
-    toc;
+    %[output.respimage timings] = COSFIRE_CUDA(images{mod(i, 20)+1}, symmfilter, asymmfilter, 0.5);
+    [output.respimage] = BCOSFIRE_media15(images{mod(i, 20)+1}, symmfilter, asymmfilter, 0.5);
+    totalTime = toc;
 elseif nargout == 2
-    [output.respimage, oriensmap] = BCOSFIRE_media15(image, symmfilter, asymmfilter, 0.5);
+    [output.respimage, oriensmap] = BCOSFIRE_media15(images{i}, symmfilter, asymmfilter, 0.5);
 else
     error('ERROR: too many output arguments.');
 end
 
 output.segmented = (output.respimage > 37); %or 36?
 
-if nargout == 0
-    figure; imagesc(output.respimage); colormap(gray); axis off; axis image; title('B-COSFIRE response image');
-    figure; imagesc(output.segmented); colormap(gray); axis off; axis image; title('B-COSFIRE segmented image');
-end    
+%if nargout == 0
+    %figure; imagesc(output.respimage); colormap(gray); axis off; axis image; title('B-COSFIRE response image');
+    %figure; imagesc(output.segmented); colormap(gray); axis off; axis image; title('B-COSFIRE segmented image');
+%end    
 %stop timer
+%timingsVector(i, :) = timings;
+totalTimings(i) = totalTime;
+%accuracies{i} = EvaluateINRIA(output.segmented, ground_truth{i});
+%EvaluateINRIA(reference.ans.segmented, ground_truth)
+end
+%statistics = zeros(21, 3);
+%for i=1:20
+    %Acc = (accuracies{i}(1)+accuracies{i}(3))/(584*565);
+    %Se = (accuracies{i}(1)/(accuracies{i}(1)+accuracies{i}(4)));
+    %Sp = (accuracies{i}(3)/(accuracies{i}(3)+accuracies{i}(2)));
+    %statistics(i, :) = [Acc Se Sp];
+%end
+%statistics(21, :) = [mean(statistics(1:20, 1)), mean(statistics(1:20, 2)), mean(statistics(1:20, 3))];
+%statistics
 
-%save('reference_symmfilter','output');
-%ensure that output is the same as in the original program
-reference=load('reference.mat');
-reference_symmfilter=load('reference_symmfilter.mat');
+%Do statistics on timings:
+mean(totalTimings)
+std(totalTimings)
 
-difference = double(reference.ans.respimage-output.respimage);
-difference_symmetricfilter=double(reference_symmfilter.output.respimage-output.respimage);
+%coreAlgorithmGPUonly = mean(timingsVector(:, 5)) + mean (timingsVector(:, 10))
+%maybe dotplot or similar for individual timings.
 
-%maxElement=max(difference)
-Norm = norm(difference)
-%Norm_symmetricfilter = norm(difference_symmetricfilter)
 
-ground_truth = imread('01_manual1.gif');
-EvaluateINRIA(output.segmented, ground_truth)
-EvaluateINRIA(reference.ans.segmented, ground_truth)
 
 

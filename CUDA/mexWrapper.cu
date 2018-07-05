@@ -38,9 +38,18 @@
 #include "pixelwiseMax.cu"
 #include "shiftPixels.cu"
 #include "getGaussian.cu"
+#include <sys/time.h>
 
 /*Number of parameters passed to function*/
 #define NUMPARAMS 8
+
+/*Timer for speedup measurements*/
+static double timer(void)
+{
+  struct timeval tm;
+  gettimeofday (&tm, NULL);
+  return tm.tv_sec + tm.tv_usec/1000000.0;
+}
 
 /*Maps each tuple to the index of the corresponding rho in the list of unique rhos*/
 void mapUniqueRhos(double *uniqueRhos, int numRhos, int *mapping, double *tuples, int numTuples) {
@@ -66,8 +75,10 @@ void mexFunction( int nlhs, mxArray *plhs[],
    double *input, *tuples, *parameters, *uniqueRhos;
    int numRows, numCols, numTuples, i, j;
    cudaError err;
-    
-   if(nrhs != 7 || nlhs!=1) {
+   double clock, totalClock;
+   double timings[5]; //0=getDoG, 1=maxBlur, 2=shift and geometric mean, 3=max, 4=total
+     
+   if(nrhs != 7 || nlhs!=2) {
       mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nrhs || nlhs", "Seven inputs and one output required");
    }
    
@@ -121,10 +132,14 @@ void mexFunction( int nlhs, mxArray *plhs[],
       mexPrintf("cudaCheckError() failed at cudaMemcpy %s\n", cudaGetErrorString( err ) );
    }
    
+   /* start timer */
+   totalClock = timer();
+   clock=timer();
+   
    /*allocate a buffer on the GPU for the 2D DoG filter*/
    double *DoGfilter;
    int sz = ceil(sigma*3) * 2 + 1;
-   cudaMalloc((void**)&DoGfilter, 100*sz*sz*sizeof(double)); //allocate one buffer that is large enough for all DoGfilters/Gaussians for the maxBlurring. Maybe call it filterBufferinstead
+   cudaMalloc((void**)&DoGfilter, 100*sz*sz*sizeof(double));
    
    err = cudaGetLastError();
    if ( cudaSuccess != err ) {
@@ -141,7 +156,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
    }
    cudaDeviceSynchronize();
    
-   //recover optimal blockSize from GPU architecture
+   /*recover optimal blockSize from GPU architecture */
    /*If only one stream is used, kernel launches are queued and executed sequentially, so supposedly no cudadevicesynchronize is needed*/
    
    /*convolute input with DoG filter*/
@@ -153,6 +168,11 @@ void mexFunction( int nlhs, mxArray *plhs[],
       mexPrintf("cudaCheckError() failed at conv2 %s\n", cudaGetErrorString( err ) );
    }
    cudaDeviceSynchronize();
+   
+   clock=timer()-clock;
+   timings[0]=clock;
+   
+   clock=timer();
    /*Next: For each rho in the set of tuples, perform a maxblurring. 
     * We have the unique rhos and number of unique rhos and the actual list of rhos, 
     * so just do the maxBlurring for all unique rhos now */
@@ -166,6 +186,10 @@ void mexFunction( int nlhs, mxArray *plhs[],
       maxBlur<<<gridSize2, blockSize2>>>(&maxBlurBuffer[i*numRows*numCols], DoGResponse, numRows, numCols, DoGfilter, sz, sz);
       cudaDeviceSynchronize();
    }
+   
+   clock=timer()-clock;
+   timings[1]=clock;
+   
    if ( cudaSuccess != err ) {
       mexPrintf("cudaCheckError() failed at getGaussian/maxBlur %s\n", cudaGetErrorString( err ) );
    }
@@ -175,6 +199,8 @@ void mexFunction( int nlhs, mxArray *plhs[],
    * the index (offset) in the maxBlurBuffer. */
    int mapping[numTuples];
    mapUniqueRhos(uniqueRhos, numRhos, mapping, tuples, numTuples);
+   
+   clock=timer();
    
    double rho, phi;
    for(i=0; i<numOrientations; i++) {
@@ -186,15 +212,33 @@ void mexFunction( int nlhs, mxArray *plhs[],
 	  cudaDeviceSynchronize();
 	  geometricMean<<<gridSize2, blockSize2>>>(&orientationResponses[i*numRows*numCols], shiftedPixelsBuffer, numRows, numCols, numTuples, threshold);
    }
+   
+   clock=timer()-clock;
+   timings[2]=clock;
+   
+   clock=timer();
    pixelwiseMax<<<gridSize2, blockSize2>>>(output, orientationResponses, numRows, numCols, numOrientations);	   
    if ( cudaSuccess != err ) {
       mexPrintf("cudaCheckError() failed at shiftPixels/geometricMean/pixelwiseMax %s\n", cudaGetErrorString( err ) );
-   }      
-    
+   }
+   clock=timer()-clock;
+   timings[3]=clock;
+   
+   /*stop timer*/
+   totalClock = timer() - totalClock;
+   timings[4]=totalClock;
    
    /*Create the output matrix, get a pointer to the real data in this */
    plhs[0] = mxCreateDoubleMatrix(1,numRows*numCols,mxREAL);
    outMatrix = mxGetPr(plhs[0]);
+   
+   double *runTimes;
+   plhs[1] = mxCreateDoubleMatrix(1,5,mxREAL);
+   runTimes = mxGetPr(plhs[1]);
+   
+   for(i=0; i<5; i++) {
+	   runTimes[i]=timings[i];
+   }	   
    
    /*Copy final response from GPU to CPU*/
    cudaMemcpy(outMatrix, output, numRows*numCols*sizeof(double), cudaMemcpyDeviceToHost);
