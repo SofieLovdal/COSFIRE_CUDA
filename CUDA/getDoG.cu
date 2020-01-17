@@ -21,5 +21,4 @@ __global__ void getDoG(double * output, double sigma, double sigmaratio) {
 	__syncthreads();
 	
 	output[linearIdx] = g2[linearIdx]-g1[linearIdx];
-
 }

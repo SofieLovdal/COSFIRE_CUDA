@@ -57,7 +57,7 @@ asymmfilter{1}.tuples(:, asymmfilter{1}.tuples(4,:) > pi) = []; % Deletion of on
 %% Filtering
 [image mask] = preprocess(image, [], preprocessthresh);
 image = 1 - image;
-%figure; imagesc(image); colormap(gray); axis off; axis image; title('preprocessed image');
+figure; imagesc(image); colormap(gray); axis off; axis image; title('preprocessed image');
 
 % Apply the symmetric B-COSFIRE to the input image
 % This returns the final response for each rotation
@@ -106,14 +106,19 @@ numRotations1 = 12;
 numRotations2 = 24;
 
 rotationStep1 = pi/(numRotations1);
-rotationStep2 = (2*pi)/(numRotations2); %Check this!!!
+rotationStep2 = (2*pi)/(numRotations2);
 
 necessaryParameters1 = [sigma1, sigmaRatio, threshold, alpha1, sigma0_1, rotationStep1, numRotations1, numRhos1];
 necessaryParameters2 = [sigma2, sigmaRatio, threshold, alpha2, sigma0_2, rotationStep2, numRotations2, numRhos2];
-%tic;
+
+fid = fopen('HRF_preprocessed_1.bin','w');
+fwrite(fid, reshape(image.',1,[]), 'double');
+fclose(fid);
+
+tic;
 [rot1 timings1] = mexWrapper(reshape(image.',1,[]), nrows, ncols, tuples1, numtuples1, necessaryParameters1, uniqueRhos1);
 [rot2 timings2] = mexWrapper(reshape(image.',1,[]), nrows, ncols, tuples2, numtuples2, necessaryParameters2, uniqueRhos2);
-%toc;
+toc;
 
 %rot1 is a row major vector, now turn it back into a matrix
 rot1 = (reshape(rot1, [ncols, nrows])).';

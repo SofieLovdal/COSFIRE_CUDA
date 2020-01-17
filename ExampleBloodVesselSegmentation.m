@@ -38,27 +38,27 @@ end
 
 % Example with an image from DRIVE data set
 for i=1:9
-   images{i} = double(imread(strcat('./DRIVE/test/images/0', num2str(i, '%d'), '_test.tif'))) ./ 255;
-   ground_truth{i} = double(imread(strcat('./DRIVE/test/2nd_manual/0', num2str(i, '%d'), + '_manual2.gif'))) ./ 255;
+   images{i} = double(imread(strcat('./HRF/healthy/0', num2str(i, '%d'), '_h.jpg'))) ./ 255;
+   %ground_truth{i} = double(imread(strcat('./DRIVE/test/2nd_manual/0', num2str(i, '%d'), + '_manual2.gif'))) ./ 255;
 end
 
-for i=10:20
-    images{i} = double(imread(strcat('./DRIVE/test/images/', num2str(i, '%d'), '_test.tif'))) ./ 255;
-    ground_truth{i} = double(imread(strcat('./DRIVE/test/2nd_manual/', num2str(i, '%d'), '_manual2.gif'))) ./ 255;
+for i=10:15
+   images{i} = double(imread(strcat('./HRF/healthy/', num2str(i, '%d'), '_h.jpg'))) ./ 255;
+   %ground_truth{i} = double(imread(strcat('./DRIVE/test/2nd_manual/', num2str(i, '%d'), '_manual2.gif'))) ./ 255;
 end    
 
 %% Symmetric filter params
 symmfilter = struct();
-symmfilter.sigma     = 2.4;
+symmfilter.sigma     = 3.2; %changed for HRF!!
 symmfilter.len       = 8;
 symmfilter.sigma0    = 3;
-symmfilter.alpha     = 0.7;
+symmfilter.alpha     = 0.3;
 
 %% Asymmetric filter params
 asymmfilter = struct();
-asymmfilter.sigma     = 1.8;
-asymmfilter.len       = 22;
-asymmfilter.sigma0    = 2;
+asymmfilter.sigma     = 2.7;
+asymmfilter.len       = 13;
+asymmfilter.sigma0    = 1;
 asymmfilter.alpha     = 0.1;
 
 %% Filters responses
@@ -74,8 +74,8 @@ totalTimings=zeros(100, 1);
 for i=1:100
 if nargout == 1 || nargout == 0
     tic;
-    %[output.respimage timings] = COSFIRE_CUDA(images{mod(i, 20)+1}, symmfilter, asymmfilter, 0.5);
-    [output.respimage] = BCOSFIRE_media15(images{mod(i, 20)+1}, symmfilter, asymmfilter, 0.5);
+    [output.respimage timings] = COSFIRE_CUDA(images{mod(i, 14)+1}, symmfilter, asymmfilter, 0.1); %preprocessthreshold is 0.1 for CHASE and 0.5 for STARE and DRIVE
+    %[output.respimage] = BCOSFIRE_media15(images{mod(i, 15)+1}, symmfilter, asymmfilter, 0.5);
     totalTime = toc;
 elseif nargout == 2
     [output.respimage, oriensmap] = BCOSFIRE_media15(images{i}, symmfilter, asymmfilter, 0.5);
@@ -84,7 +84,9 @@ else
 end
 
 output.segmented = (output.respimage > 37); %or 36?
-
+%close all;
+%clear global;
+%pause(0.5);
 %if nargout == 0
     %figure; imagesc(output.respimage); colormap(gray); axis off; axis image; title('B-COSFIRE response image');
     %figure; imagesc(output.segmented); colormap(gray); axis off; axis image; title('B-COSFIRE segmented image');
@@ -92,6 +94,8 @@ output.segmented = (output.respimage > 37); %or 36?
 %stop timer
 %timingsVector(i, :) = timings;
 totalTimings(i) = totalTime;
+
+percentageDone = i
 %accuracies{i} = EvaluateINRIA(output.segmented, ground_truth{i});
 %EvaluateINRIA(reference.ans.segmented, ground_truth)
 end

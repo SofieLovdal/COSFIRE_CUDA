@@ -192,7 +192,6 @@ switch (params.ht)
                 
                 if strcmp(params.COSFIRE.blurringfunction,'max')                    
                     hashvaluelist{i} = blurshift(ifresp,sigma,0,0);
-                    %save('blurredRef1', 'hashvaluelist');
                 elseif strcmp(params.COSFIRE.blurringfunction,'sum')
                     blurfunction = fspecial('gaussian',[1 round(sigma.*6)],sigma);
                     hashvaluelist{i} = conv2(blurfunction,blurfunction,ifresp,'same');
@@ -303,7 +302,6 @@ for sindex = 1:ntuples
         case 1
             hashkey = getHashkey(operator.tuples(1:3,sindex)');            
             tupleoutput = circshift(tuple.hashtable(hashkey),[round(row),-round(col)]);
-            %save('shiftedResponse1', 'tupleoutput'); 
     end
     
     outputs(:,:,sindex) = tupleoutput;
@@ -323,7 +321,6 @@ elseif strcmp(operator.params.COSFIRE.outputfunction, 'geometricmean')
     % Compute the COSFIRE output using geometric mean
     m = output .^ (1/ntuples);
     output = m;
-    save('geometricMeanOutput1', 'output'); 
 elseif strcmp(operator.params.COSFIRE.outputfunction, 'arithmeticmean')
     output = mean(outputs, 3);
 elseif strcmp(operator.params.COSFIRE.outputfunction, 'harmonicmean')
